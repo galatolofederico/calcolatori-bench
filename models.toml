@@ -2,16 +2,19 @@
 name = "grok-code-fast-1-openrouter"
 provider = "openrouter"
 model_id = "x-ai/grok-code-fast-1"
+shortcut = "nitro"
 
 [[model]]
 name = "glm-5-openrouter"
 provider = "openrouter"
 model_id = "z-ai/glm-5"
+shortcut = "nitro"
 
 [[model]]
 name = "minimax-m2.5-openrouter"
 provider = "openrouter"
 model_id = "minimax/minimax-m2.5"
+shortcut = "nitro"
 
 [[model]]
 name = "glm-4.7"
