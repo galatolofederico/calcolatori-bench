@@ -60,7 +60,9 @@ def extract_pdf_text(pdf_path: Path) -> str:
     """Extract text content from a PDF file using pdftotext."""
     result = subprocess.run(
         ["pdftotext", "-layout", str(pdf_path), "-"],
-        capture_output=True, text=True, timeout=30
+        capture_output=True,
+        text=True,
+        timeout=30,
     )
     if result.returncode != 0:
         print(f"  WARNING: pdftotext failed for {pdf_path}: {result.stderr}")
@@ -75,13 +77,7 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
 
     config = {
         "$schema": "https://opencode.ai/config.json",
-        "provider": {
-            provider: {
-                "models": {
-                    model_id: {}
-                }
-            }
-        }
+        "provider": {provider: {"models": {model_id: {}}}},
     }
     return config
 
@@ -89,11 +85,7 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
 def generate_auth_json(model: dict, api_key: str) -> dict:
     """Generate the auth.json for opencode credentials."""
     provider = model["provider"]
-    return {
-        provider: {
-            "api_key": api_key
-        }
-    }
+    return {provider: {"api_key": api_key}}
 
 
 def normalize_output(text: str) -> list[str]:
@@ -110,7 +102,7 @@ def normalize_output(text: str) -> list[str]:
     for line in text.splitlines():
         if "USR" in line:
             # Apply the sed transformation: strip "USR <number> " prefix
-            normalized = re.sub(r'USR\s+[0-9]+\s+', 'USR ', line.strip())
+            normalized = re.sub(r"USR\s+[0-9]+\s+", "USR ", line.strip())
             # Strip the "USR " prefix to match es2.out.0 format
             if normalized.startswith("USR "):
                 normalized = normalized[4:]
@@ -137,12 +129,29 @@ def compare_output(actual_lines: list[str], expected_variants: list[list[str]]) 
     return False
 
 
+def check_docker_image():
+    """Check if the required Docker image exists."""
+    result = subprocess.run(
+        ["docker", "image", "inspect", DOCKER_IMAGE], capture_output=True, text=True
+    )
+    return result.returncode == 0
+
+
 def build_docker_image():
     """Build the Docker image from container/Dockerfile."""
     print("==> Building Docker image...")
     result = subprocess.run(
-        ["docker", "build", "-t", DOCKER_IMAGE, "-f", "container/Dockerfile", "container/"],
-        capture_output=False, timeout=600
+        [
+            "docker",
+            "build",
+            "-t",
+            DOCKER_IMAGE,
+            "-f",
+            "container/Dockerfile",
+            "container/",
+        ],
+        capture_output=False,
+        timeout=600,
     )
     if result.returncode != 0:
         print("ERROR: Failed to build Docker image")
@@ -150,7 +159,9 @@ def build_docker_image():
     print("==> Docker image built successfully")
 
 
-def run_exam(model: dict, exam_dir: Path, api_key: str, timeout_agent: int = 300) -> dict:
+def run_exam(
+    model: dict, exam_dir: Path, api_key: str, timeout_agent: int = 300
+) -> dict:
     """Run a single model × exam evaluation.
 
     Returns a dict with keys: passed, output, expected, diff, error
@@ -158,10 +169,10 @@ def run_exam(model: dict, exam_dir: Path, api_key: str, timeout_agent: int = 300
     model_name = model["name"]
     exam_name = exam_dir.name
 
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print(f"  Model: {model_name}")
     print(f"  Exam:  {exam_name}")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
 
     rd = result_dir(model_name, exam_name)
     rd.mkdir(parents=True, exist_ok=True)
@@ -170,7 +181,13 @@ def run_exam(model: dict, exam_dir: Path, api_key: str, timeout_agent: int = 300
     print("  -> Extracting testo.pdf...")
     pdf_text = extract_pdf_text(exam_dir / "testo.pdf")
     if not pdf_text:
-        return {"passed": False, "output": "", "expected": "", "diff": "", "error": "Failed to extract PDF"}
+        return {
+            "passed": False,
+            "output": "",
+            "expected": "",
+            "diff": "",
+            "error": "Failed to extract PDF",
+        }
 
     # Generate opencode config
     opencode_config = generate_opencode_config(model, api_key)
@@ -208,7 +225,9 @@ Remember: ALWAYS use `timeout 10s boot` instead of `boot` - this is critical to 
 """
 
     # Create a container and run the evaluation
-    container_name = f"bench-{model_name}-{exam_name}".replace("/", "-").replace(".", "-")
+    container_name = f"bench-{model_name}-{exam_name}".replace("/", "-").replace(
+        ".", "-"
+    )
 
     # Clean up any existing container with same name
     subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
@@ -287,18 +306,29 @@ echo "===DONE==="
         print("  -> Running agent in container (this may take a while)...")
         proc = subprocess.run(
             [
-                "docker", "run",
-                "--name", container_name,
-                "-e", f"OPENROUTER_API_KEY={api_key}",
-                "-e", "AUTOCORR=1",
-                "-v", f"{(exam_dir / 'es2.zip').resolve()}:/tmp/es2.zip:ro",
-                "-v", f"{config_path.resolve()}:/tmp/opencode.json:ro",
-                "-v", f"{auth_path.resolve()}:/tmp/auth.json:ro",
-                "-v", f"{script_path.resolve()}:/tmp/run_inner.sh:ro",
+                "docker",
+                "run",
+                "--name",
+                container_name,
+                "-e",
+                f"OPENROUTER_API_KEY={api_key}",
+                "-e",
+                "AUTOCORR=1",
+                "-v",
+                f"{(exam_dir / 'es2.zip').resolve()}:/tmp/es2.zip:ro",
+                "-v",
+                f"{config_path.resolve()}:/tmp/opencode.json:ro",
+                "-v",
+                f"{auth_path.resolve()}:/tmp/auth.json:ro",
+                "-v",
+                f"{script_path.resolve()}:/tmp/run_inner.sh:ro",
                 DOCKER_IMAGE,
-                "bash", "/tmp/run_inner.sh"
+                "bash",
+                "/tmp/run_inner.sh",
             ],
-            capture_output=True, text=True, timeout=timeout_agent
+            capture_output=True,
+            text=True,
+            timeout=timeout_agent,
         )
 
         agent_stdout = proc.stdout
@@ -309,10 +339,20 @@ echo "===DONE==="
         (rd / "agent_stderr.log").write_text(agent_stderr)
 
         # Copy artifacts out of the container
-        for artifact in ["solution.diff", "boot_output.txt", "normalized_output.txt", "agent_output.log"]:
+        for artifact in [
+            "solution.diff",
+            "boot_output.txt",
+            "normalized_output.txt",
+            "agent_output.log",
+        ]:
             subprocess.run(
-                ["docker", "cp", f"{container_name}:/tmp/{artifact}", str(rd / artifact)],
-                capture_output=True
+                [
+                    "docker",
+                    "cp",
+                    f"{container_name}:/tmp/{artifact}",
+                    str(rd / artifact),
+                ],
+                capture_output=True,
             )
 
     except subprocess.TimeoutExpired:
@@ -325,7 +365,7 @@ echo "===DONE==="
             "output": "",
             "expected": "",
             "diff": "",
-            "error": f"Timeout after {timeout_agent}s"
+            "error": f"Timeout after {timeout_agent}s",
         }
         with open(rd / "result.json", "w") as f:
             json.dump(result_data, f, indent=2)
@@ -378,7 +418,7 @@ echo "===DONE==="
         "expected": expected_variants[0] if expected_variants else [],
         "boot_output": boot_output,
         "diff": diff_text,
-        "error": None
+        "error": None,
     }
 
     with open(rd / "result.json", "w") as f:
@@ -390,23 +430,47 @@ echo "===DONE==="
 def main():
     global RESULTS_DIR, EXAMS_DIR, MODELS_CONFIG
 
-    parser = argparse.ArgumentParser(description="calcolatori-bench: benchmark LLM agents on CE exams")
-    parser.add_argument("--models", type=Path, default=MODELS_CONFIG,
-                        help="Path to models TOML config (default: models.toml)")
-    parser.add_argument("--exams", type=Path, default=EXAMS_DIR,
-                        help="Path to exams directory (default: exams/)")
-    parser.add_argument("--results", type=Path, default=RESULTS_DIR,
-                        help="Path to results directory (default: results/)")
-    parser.add_argument("--timeout", type=int, default=600,
-                        help="Timeout per agent run in seconds (default: 600)")
-    parser.add_argument("--build", action="store_true",
-                        help="Build the Docker image before running")
-    parser.add_argument("--no-cache", action="store_true",
-                        help="Ignore cached results and re-run everything")
-    parser.add_argument("--model", type=str, default=None,
-                        help="Run only this model (by name)")
-    parser.add_argument("--exam", type=str, default=None,
-                        help="Run only this exam (by directory name)")
+    parser = argparse.ArgumentParser(
+        description="calcolatori-bench: benchmark LLM agents on CE exams"
+    )
+    parser.add_argument(
+        "--models",
+        type=Path,
+        default=MODELS_CONFIG,
+        help="Path to models TOML config (default: models.toml)",
+    )
+    parser.add_argument(
+        "--exams",
+        type=Path,
+        default=EXAMS_DIR,
+        help="Path to exams directory (default: exams/)",
+    )
+    parser.add_argument(
+        "--results",
+        type=Path,
+        default=RESULTS_DIR,
+        help="Path to results directory (default: results/)",
+    )
+    parser.add_argument(
+        "--timeout",
+        type=int,
+        default=600,
+        help="Timeout per agent run in seconds (default: 600)",
+    )
+    parser.add_argument(
+        "--build", action="store_true", help="Build the Docker image before running"
+    )
+    parser.add_argument(
+        "--no-cache",
+        action="store_true",
+        help="Ignore cached results and re-run everything",
+    )
+    parser.add_argument(
+        "--model", type=str, default=None, help="Run only this model (by name)"
+    )
+    parser.add_argument(
+        "--exam", type=str, default=None, help="Run only this exam (by directory name)"
+    )
     args = parser.parse_args()
 
     RESULTS_DIR = args.results
@@ -459,6 +523,12 @@ def main():
     if args.build:
         build_docker_image()
 
+    # Check if Docker image exists
+    if not check_docker_image():
+        print(f"ERROR: Docker image '{DOCKER_IMAGE}' does not exist.")
+        print("Run 'python evaluate.py --build' to build it.")
+        sys.exit(1)
+
     # Run evaluations
     results_summary = []
     for model in models:
@@ -472,28 +542,32 @@ def main():
                 rd = result_dir(model_name, exam_name)
                 with open(rd / "result.json") as f:
                     cached = json.load(f)
-                results_summary.append({
-                    "model": model_name,
-                    "exam": exam_name,
-                    "passed": cached["passed"],
-                    "cached": True
-                })
+                results_summary.append(
+                    {
+                        "model": model_name,
+                        "exam": exam_name,
+                        "passed": cached["passed"],
+                        "cached": True,
+                    }
+                )
                 continue
 
             result = run_exam(model, exam, api_key, timeout_agent=args.timeout)
-            results_summary.append({
-                "model": model_name,
-                "exam": exam_name,
-                "passed": result["passed"],
-                "cached": False
-            })
+            results_summary.append(
+                {
+                    "model": model_name,
+                    "exam": exam_name,
+                    "passed": result["passed"],
+                    "cached": False,
+                }
+            )
 
     # Print summary
-    print(f"\n{'='*60}")
+    print(f"\n{'=' * 60}")
     print("SUMMARY")
-    print(f"{'='*60}")
+    print(f"{'=' * 60}")
     print(f"{'Model':<30} {'Exam':<20} {'Result':<10}")
-    print(f"{'-'*30} {'-'*20} {'-'*10}")
+    print(f"{'-' * 30} {'-' * 20} {'-' * 10}")
     for r in results_summary:
         status = "PASS" if r["passed"] else "FAIL"
         cached = " (cached)" if r["cached"] else ""
