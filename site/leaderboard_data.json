@@ -1,9 +1,33 @@
 {
-  "generated_at": "2026-02-14T11:43:46.984684Z",
-  "total_models": 0,
-  "total_exams": 0,
-  "models": [],
-  "exams": [],
-  "model_stats": {},
-  "exam_results": {}
+  "generated_at": "2026-02-14T13:38:49.638707Z",
+  "total_models": 1,
+  "total_exams": 2,
+  "models": [
+    "glm-4.7"
+  ],
+  "exams": [
+    "2023-01-11_08",
+    "2023-06-07_08"
+  ],
+  "model_stats": {
+    "glm-4.7": {
+      "passed": 1,
+      "total": 2,
+      "percentage": 50.0
+    }
+  },
+  "exam_results": {
+    "2023-01-11_08": {
+      "glm-4.7": {
+        "passed": true,
+        "error": null
+      }
+    },
+    "2023-06-07_08": {
+      "glm-4.7": {
+        "passed": false,
+        "error": null
+      }
+    }
+  }
 }
