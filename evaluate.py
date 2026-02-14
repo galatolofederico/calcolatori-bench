@@ -202,7 +202,7 @@ def build_docker_image():
             "container/",
         ],
         capture_output=False,
-        timeout=600,
+        timeout=30*60,
     )
     if result.returncode != 0:
         print("ERROR: Failed to build Docker image")
@@ -523,8 +523,8 @@ def main():
     parser.add_argument(
         "--timeout",
         type=int,
-        default=600,
-        help="Timeout per agent run in seconds (default: 600)",
+        default=30*60,
+        help="Timeout per agent run in seconds (default: 30 minutes)",
     )
     parser.add_argument(
         "--build", action="store_true", help="Build the Docker image before running"
