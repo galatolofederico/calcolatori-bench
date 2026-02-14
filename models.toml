@@ -1,0 +1,4 @@
+[[model]]
+name = "grok-code-fast-1"
+provider = "openrouter"
+model_id = "x-ai/grok-code-fast-1"
