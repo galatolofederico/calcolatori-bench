@@ -481,11 +481,18 @@ echo "===DONE==="
     if boot_path.exists():
         boot_output = boot_path.read_text()
 
+    # Read agent output
+    agent_output = ""
+    agent_output_path = rd / "agent_output.log"
+    if agent_output_path.exists():
+        agent_output = agent_output_path.read_text()
+
     result_data = {
         "passed": passed,
         "output": actual_lines,
         "expected": expected_variants[0] if expected_variants else [],
         "boot_output": boot_output,
+        "agent_output": agent_output,
         "diff": diff_text,
         "error": None,
     }
