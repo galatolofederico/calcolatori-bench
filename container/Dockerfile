@@ -20,7 +20,7 @@ RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
     apt install -y nodejs
 
 # Install opencode
-RUN npm install -g opencode
+RUN npm install -g opencode-ai
 
 # Build libce and qemu-ce
 RUN mkdir /dist
