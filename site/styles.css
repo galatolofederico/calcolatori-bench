@@ -12,13 +12,14 @@ body {
 }
 
 main {
-    max-width: 900px;
+    max-width: 1100px;
     margin: 0 auto;
     padding: 60px 24px;
 }
 
 header {
-    margin-bottom: 48px;
+    text-align: center;
+    margin-bottom: 24px;
 }
 
 header h1 {
@@ -31,6 +32,19 @@ header h1 {
 header p {
     color: #666;
     font-size: 0.95rem;
+}
+
+.github-link {
+    display: inline-block;
+    margin-top: 12px;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.85rem;
+    transition: color 0.15s;
+}
+
+.github-link:hover {
+    color: #e5e5e5;
 }
 
 .back-link {
@@ -131,12 +145,13 @@ td {
 
 #stats {
     display: flex;
+    justify-content: center;
     gap: 32px;
     font-size: 0.85rem;
     color: #555;
     padding: 16px 0;
-    border-bottom: 1px solid #222;
-    margin-bottom: 32px;
+    border-top: 1px solid #222;
+    margin-top: 32px;
 }
 
 #stats strong {
@@ -312,6 +327,7 @@ td {
 
     #stats {
         flex-direction: column;
+        align-items: center;
         gap: 8px;
     }
 
