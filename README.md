@@ -55,10 +55,21 @@ provider = "openrouter"
 model_id = "x-ai/grok-code-fast-1"
 
 [[model]]
+name = "grok-code-fast-1-nitro"
+provider = "openrouter"
+model_id = "x-ai/grok-code-fast-1"
+shortcut = "nitro"  # OpenRouter shortcut: :nitro for throughput, :floor for price, :free for free tier
+
+[[model]]
 name = "glm-4.7"
 provider = "zai-coding-plan"
 model_id = "glm-4.7"
 ```
+
+**OpenRouter shortcuts:**
+- `shortcut = "nitro"` - Sort providers by throughput (highest first)
+- `shortcut = "floor"` - Sort providers by price (lowest first)
+- `shortcut = "free"` - Route to free tier providers
 
 ### 📊 Results Structure
 

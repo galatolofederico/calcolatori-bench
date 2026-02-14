@@ -124,6 +124,28 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
     provider_config = get_provider_config(provider_name)
     provider_id = provider_config["provider_id"]
     model_id = model["model_id"]
+    shortcut = model.get("shortcut")
+
+    if provider_name == "openrouter" and shortcut:
+        shortcut_provider_id = "openrouter-shortcut"
+        full_model_id = f"{model_id}:{shortcut}"
+        config = {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": "allow",
+            "provider": {
+                shortcut_provider_id: {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "options": {"baseURL": "https://openrouter.ai/api/v1"},
+                    "models": {
+                        full_model_id: {
+                            "id": full_model_id,
+                            "name": f"{model_id} ({shortcut})",
+                        }
+                    },
+                }
+            },
+        }
+        return config
 
     config = {
         "$schema": "https://opencode.ai/config.json",
@@ -138,6 +160,11 @@ def generate_auth_json(model: dict, api_key: str) -> dict:
     provider_name = model["provider"]
     provider_config = get_provider_config(provider_name)
     provider_id = provider_config["provider_id"]
+    shortcut = model.get("shortcut")
+
+    if provider_name == "openrouter" and shortcut:
+        provider_id = "openrouter-shortcut"
+
     return {provider_id: {"type": "api", "key": api_key}}
 
 
@@ -225,6 +252,12 @@ def run_exam(
     provider_config = get_provider_config(provider_name)
     env_var = provider_config["env_var"]
     provider_id = provider_config["provider_id"]
+    model_id = model["model_id"]
+    shortcut = model.get("shortcut")
+
+    if provider_name == "openrouter" and shortcut:
+        provider_id = "openrouter-shortcut"
+        model_id = f"{model_id}:{shortcut}"
 
     print(f"\n{'=' * 60}")
     print(f"  Model: {model_name}")
@@ -351,7 +384,7 @@ cp /tmp/opencode.json /work/es2/nucleo/opencode.json
 export {env_var}="${env_var}"
 cd /work/es2/nucleo
 
-opencode run '{prompt_escaped}' --model '{provider_id}/{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
+opencode run '{prompt_escaped}' --model '{provider_id}/{model_id}' 2>&1 | tee /tmp/agent_output.log || true
 
 # Save the diff
 git diff > /tmp/solution.diff
@@ -796,10 +829,20 @@ def main():
         provider = model["provider"]
         provider_config = get_provider_config(provider)
         api_key = model_api_keys[model_name]
+        shortcut = model.get("shortcut")
+
+        dry_run_provider_id = provider_config["provider_id"]
+        dry_run_model_id = model["model_id"]
+        if provider == "openrouter" and shortcut:
+            dry_run_provider_id = "openrouter-shortcut"
+            dry_run_model_id = f"{dry_run_model_id}:{shortcut}"
 
         print(f"Dry-run for model: {model_name}")
         print(f"Provider: {provider}")
-        print(f"Provider ID: {provider_config['provider_id']}")
+        print(f"Provider ID: {dry_run_provider_id}")
+        print(f"Model ID: {dry_run_model_id}")
+        if shortcut:
+            print(f"Shortcut: {shortcut}")
         print(f"Env var: {provider_config['env_var']}")
         print(
             f"API key: {'*' * 8}{api_key[-4:]}"
@@ -826,7 +869,7 @@ def main():
                 "run",
                 test_prompt,
                 "--model",
-                f"{provider_config['provider_id']}/{model['model_id']}",
+                f"{dry_run_provider_id}/{dry_run_model_id}",
             ],
             capture_output=True,
             text=True,
