@@ -1,6 +1,6 @@
-# 🍝 calcolatori-bench
+# 🍝 calcolatori-bench 🏋️
 
-**An esoteric benchmark for Agentic LLMs based on the University of Pisa's "Calcolatori Elettronici" course.**
+**An esoteric benchmark for Agentic LLMs based on the University of Pisa's [Calcolatori Elettronici](https://calcolatori.iet.unipi.it/) course.**
 
 `calcolatori-bench` is a rigorous benchmark designed to break LLMs by throwing them into the deep end of the **University of Pisa's "Calcolatori Elettronici"** course.
 
