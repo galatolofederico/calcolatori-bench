@@ -257,6 +257,8 @@ cd /work/es2/nucleo
 
 # Initialize git repo to track changes
 git init
+git config user.email "agent@bench.local"
+git config user.name "Agent"
 git add -A
 git commit -m "initial state" --allow-empty
 
