@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>calcolatori-bench Leaderboard</title>
+    <link rel="stylesheet" href="styles.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🖥️</text></svg>">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>calcolatori-bench</h1>
+            <p class="subtitle">An evaluation framework for Agentic LLMs based on the University of Pisa's "Calcolatori Elettronici" course</p>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="about">
+            <h2>About</h2>
+            <p>
+                <strong>calcolatori-bench</strong> tests an agent's ability to navigate an obscure, highly technical, 
+                and strictly constrained mixed-language environment (C++ and x86_64 Assembly) with virtually zero 
+                training data contamination.
+            </p>
+            <p>
+                The exams run on a custom educational OS/kernel environment. To pass, an agent must understand 
+                low-level memory management, hardware interrupts, and specific kernel interfaces.
+            </p>
+        </section>
+
+        <section id="stats">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <span class="stat-value" id="total-models">-</span>
+                    <span class="stat-label">Models Evaluated</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="total-exams">-</span>
+                    <span class="stat-label">Exams</span>
+                </div>
+                <div class="stat-card">
+                    <span class="stat-value" id="last-updated">-</span>
+                    <span class="stat-label">Last Updated</span>
+                </div>
+            </div>
+        </section>
+
+        <section id="leaderboard">
+            <h2>Leaderboard</h2>
+            <div class="table-wrapper">
+                <table id="leaderboard-table">
+                    <thead>
+                        <tr>
+                            <th>Rank</th>
+                            <th>Model</th>
+                            <th>Score</th>
+                            <th>Percentage</th>
+                        </tr>
+                    </thead>
+                    <tbody id="leaderboard-body">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="detailed-results">
+            <h2>Detailed Results</h2>
+            <div class="table-wrapper">
+                <table id="results-table">
+                    <thead id="results-header">
+                    </thead>
+                    <tbody id="results-body">
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>
+                <a href="https://github.com/anomaly-labs/calcolatori-bench" target="_blank">GitHub</a>
+                &nbsp;|&nbsp;
+                University of Pisa - Calcolatori Elettronici
+            </p>
+        </div>
+    </footer>
+
+    <script src="app.js"></script>
+</body>
+</html>
