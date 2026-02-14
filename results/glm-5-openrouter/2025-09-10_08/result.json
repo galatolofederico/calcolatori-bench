@@ -1,0 +1,8 @@
+{
+  "passed": false,
+  "output": "",
+  "expected": "",
+  "diff": "",
+  "duration_seconds": 1800,
+  "error": "Timeout after 1800s"
+}
