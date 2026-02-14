@@ -540,6 +540,11 @@ def main():
     parser.add_argument(
         "--exam", type=str, default=None, help="Run only this exam (by directory name)"
     )
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Test opencode config for a model without running evaluation (requires --model)",
+    )
     args = parser.parse_args()
 
     RESULTS_DIR = args.results
@@ -573,6 +578,66 @@ def main():
         if not models:
             print(f"ERROR: Model '{args.model}' not found in config")
             sys.exit(1)
+
+    # Dry-run mode: test opencode config and exit
+    if args.dry_run:
+        if not args.model:
+            print("ERROR: --dry-run requires --model to be specified")
+            sys.exit(1)
+
+        model = models[0]
+        model_name = model["name"]
+        provider = model["provider"]
+        provider_config = get_provider_config(provider)
+        api_key = model_api_keys[model_name]
+
+        print(f"Dry-run for model: {model_name}")
+        print(f"Provider: {provider}")
+        print(f"Provider ID: {provider_config['provider_id']}")
+        print(f"Env var: {provider_config['env_var']}")
+        print(
+            f"API key: {'*' * 8}{api_key[-4:]}"
+            if len(api_key) > 4
+            else "API key too short"
+        )
+        print()
+
+        opencode_config = generate_opencode_config(model, api_key)
+        auth_config = generate_auth_json(model, api_key)
+
+        print("opencode.json:")
+        print(json.dumps(opencode_config, indent=2))
+        print()
+        print("auth.json:")
+        print(json.dumps(auth_config, indent=2))
+        print()
+
+        print("Testing opencode connection...")
+        test_prompt = "Reply with just: OK"
+        result = subprocess.run(
+            [
+                "opencode",
+                "run",
+                test_prompt,
+                "--model",
+                f"{provider_config['provider_id']}/{model['model_id']}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env={**os.environ, provider_config["env_var"]: api_key},
+        )
+        print("STDOUT:", result.stdout)
+        if result.stderr:
+            print("STDERR:", result.stderr)
+        print("Return code:", result.returncode)
+
+        if result.returncode == 0:
+            print("\n✓ Dry-run successful!")
+        else:
+            print("\n✗ Dry-run failed!")
+            sys.exit(1)
+        return
 
     # Discover exams
     exams = discover_exams(EXAMS_DIR)
