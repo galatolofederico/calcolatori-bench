@@ -40,6 +40,10 @@ def load_results(results_dir: Path) -> list[dict]:
                         "passed": data.get("passed", False),
                         "error": data.get("error"),
                         "diff": data.get("diff", ""),
+                        "output": data.get("output", []),
+                        "expected": data.get("expected", []),
+                        "boot_output": data.get("boot_output", ""),
+                        "agent_output": data.get("agent_output", ""),
                     }
                 )
     return results
@@ -62,6 +66,7 @@ def build_leaderboard_data(results: list[dict]) -> dict:
         }
 
     exam_results = {}
+    detailed_results = {}
     for exam in exams:
         exam_results[exam] = {}
         for model in models:
@@ -72,6 +77,15 @@ def build_leaderboard_data(results: list[dict]) -> dict:
                 exam_results[exam][model] = {
                     "passed": result["passed"],
                     "error": result["error"],
+                }
+                detailed_results.setdefault(model, {})[exam] = {
+                    "passed": result["passed"],
+                    "error": result["error"],
+                    "diff": result["diff"],
+                    "output": result["output"],
+                    "expected": result["expected"],
+                    "boot_output": result["boot_output"],
+                    "agent_output": result["agent_output"],
                 }
             else:
                 exam_results[exam][model] = {
@@ -93,6 +107,7 @@ def build_leaderboard_data(results: list[dict]) -> dict:
         "exams": exams,
         "model_stats": model_stats,
         "exam_results": exam_results,
+        "detailed_results": detailed_results,
     }
 
 
@@ -125,6 +140,7 @@ def main():
             "exams": [],
             "model_stats": {},
             "exam_results": {},
+            "detailed_results": {},
         }
     else:
         leaderboard_data = build_leaderboard_data(results)

@@ -33,6 +33,19 @@ header p {
     font-size: 0.95rem;
 }
 
+.back-link {
+    display: inline-block;
+    color: #666;
+    text-decoration: none;
+    font-size: 0.9rem;
+    margin-bottom: 16px;
+    transition: color 0.15s;
+}
+
+.back-link:hover {
+    color: #e5e5e5;
+}
+
 section {
     margin-bottom: 48px;
 }
@@ -74,7 +87,11 @@ td {
     transition: background 0.15s;
 }
 
-#leaderboard-table tbody tr:hover {
+#leaderboard-table tbody tr.clickable {
+    cursor: pointer;
+}
+
+#leaderboard-table tbody tr.clickable:hover {
     background: #111;
 }
 
@@ -112,34 +129,161 @@ td {
     border-radius: 2px;
 }
 
-.table-wrap {
-    overflow-x: auto;
-}
-
-#results-table td {
-    text-align: center;
-    font-size: 0.85rem;
-}
-
-#results-table .model-col {
-    text-align: left;
-    font-weight: 500;
-}
-
-.pass { color: #4ade80; }
-.fail { color: #f87171; }
-.na { color: #333; }
-
 #stats {
     display: flex;
     gap: 32px;
     font-size: 0.85rem;
     color: #555;
+    padding: 16px 0;
+    border-bottom: 1px solid #222;
+    margin-bottom: 32px;
 }
 
 #stats strong {
     color: #888;
 }
+
+#model-stats {
+    color: #4ade80;
+    font-family: 'SF Mono', Monaco, monospace;
+    font-size: 0.95rem;
+}
+
+#exams-container {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.exam-card {
+    background: #111;
+    border-radius: 8px;
+    border: 1px solid #222;
+    overflow: hidden;
+}
+
+.exam-card.pass {
+    border-left: 3px solid #4ade80;
+}
+
+.exam-card.fail {
+    border-left: 3px solid #f87171;
+}
+
+.exam-card.na {
+    border-left: 3px solid #333;
+}
+
+.exam-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    background: #161616;
+}
+
+.exam-name {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.exam-status {
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: 4px 12px;
+    border-radius: 4px;
+}
+
+.exam-card.pass .exam-status {
+    background: rgba(74, 222, 128, 0.15);
+    color: #4ade80;
+}
+
+.exam-card.fail .exam-status {
+    background: rgba(248, 113, 113, 0.15);
+    color: #f87171;
+}
+
+.exam-details {
+    padding: 20px;
+}
+
+.detail-section {
+    margin-bottom: 20px;
+}
+
+.detail-section:last-child {
+    margin-bottom: 0;
+}
+
+.detail-section h4 {
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #666;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+}
+
+.collapsible-header {
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 0;
+    transition: color 0.15s;
+}
+
+.collapsible-header:hover {
+    color: #888;
+}
+
+.toggle-icon {
+    font-size: 1rem;
+    color: #666;
+}
+
+.output-block, .diff-block {
+    background: #0a0a0a;
+    border: 1px solid #222;
+    border-radius: 6px;
+    padding: 12px 16px;
+    font-family: 'SF Mono', Monaco, 'Consolas', monospace;
+    font-size: 0.8rem;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.output-block.collapsed {
+    max-height: 0;
+    padding: 0 16px;
+    border: none;
+    overflow: hidden;
+}
+
+.diff-block {
+    color: #e5e5e5;
+}
+
+.no-data {
+    color: #555;
+    font-style: italic;
+    padding: 8px 0;
+}
+
+.error {
+    color: #f87171;
+}
+
+.pass { color: #4ade80; }
+.fail { color: #f87171; }
+.na { color: #333; }
 
 @media (max-width: 640px) {
     main {
@@ -157,5 +301,16 @@ td {
     #stats {
         flex-direction: column;
         gap: 8px;
+    }
+
+    .exam-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 8px;
+    }
+
+    .output-block, .diff-block {
+        font-size: 0.75rem;
+        padding: 10px 12px;
     }
 }
