@@ -127,6 +127,7 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
 
     config = {
         "$schema": "https://opencode.ai/config.json",
+        "permission": "allow",
         "provider": {provider_id: {"models": {model_id: {}}}},
     }
     return config
