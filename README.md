@@ -1,8 +1,8 @@
 # 🍝 calcolatori-bench
 
-**An esoteric evaluation framework for Agentic LLMs based on the University of Pisa's "Calcolatori Elettronici" course.**
+**An esoteric benchmark for Agentic LLMs based on the University of Pisa's "Calcolatori Elettronici" course.**
 
-`calcolatori-bench` is a rigorous evaluation framework designed to break LLMs by throwing them into the deep end of the **University of Pisa's "Calcolatori Elettronici"** course.
+`calcolatori-bench` is a rigorous benchmark designed to break LLMs by throwing them into the deep end of the **University of Pisa's "Calcolatori Elettronici"** course.
 
 It tests an agent's ability to navigate an obscure, highly technical, and strictly constrained mixed-language environment (C++ and x86_64 Assembly) with **virtually zero training data contamination**.
 
