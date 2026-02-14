@@ -202,7 +202,7 @@ def build_docker_image():
             "container/",
         ],
         capture_output=False,
-        timeout=30*60,
+        timeout=30 * 60,
     )
     if result.returncode != 0:
         print("ERROR: Failed to build Docker image")
@@ -496,6 +496,194 @@ echo "===DONE==="
     return result_data
 
 
+def run_eval_dry_run(args):
+    """Run evaluation pipeline without opencode - for testing infrastructure."""
+    model_name = "dry-run"
+
+    exams = discover_exams(EXAMS_DIR)
+    if not exams:
+        print("ERROR: No exams found")
+        sys.exit(1)
+
+    if args.exam:
+        exams = [e for e in exams if e.name == args.exam]
+        if not exams:
+            print(f"ERROR: Exam '{args.exam}' not found")
+            sys.exit(1)
+
+    print(f"Eval dry-run mode - skipping opencode execution")
+    print(f"Exams:  {[e.name for e in exams]}")
+
+    if not check_docker_image():
+        print(f"ERROR: Docker image '{DOCKER_IMAGE}' does not exist.")
+        print("Run 'python evaluate.py --build' to build it.")
+        sys.exit(1)
+
+    results_summary = []
+    for exam in exams:
+        exam_name = exam.name
+
+        print(f"\n{'=' * 60}")
+        print(f"  Exam:  {exam_name} (dry-run)")
+        print(f"{'=' * 60}")
+
+        rd = result_dir(model_name, exam_name)
+        rd.mkdir(parents=True, exist_ok=True)
+
+        container_name = f"bench-dry-run-{exam_name}".replace(".", "-")
+        subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+        print("  -> Starting container...")
+
+        inner_script = """#!/bin/bash
+set -e
+
+cd /work
+
+unzip -o /tmp/es2.zip
+cd /work/es2/nucleo
+
+cat > .gitignore << 'GITIGNORE'
+*
+!*.cpp
+!*.s
+!*.h
+!*.asm
+!*.c
+!.gitignore
+!dry-run.cpp
+!*/
+GITIGNORE
+
+git init
+git config user.email "agent@bench.local"
+git config user.name "Agent"
+git add -A
+git commit -m "initial state" --allow-empty
+
+git add -A
+git commit -m "before agent" --allow-empty
+
+# Create dummy file to generate a diff
+cat > dry-run.cpp << 'DRYRUN'
+// This is a dry-run placeholder file
+// Created to test git diff functionality
+int dry_run_marker = 42;
+DRYRUN
+
+echo "=== DRY-RUN: Skipping opencode execution ==="
+
+git diff > /tmp/solution.diff
+git add -A
+git diff --cached >> /tmp/solution.diff
+
+export AUTOCORR=1
+make clean 2>&1 || true
+make 2>&1 || echo "MAKE_FAILED"
+timeout 10s boot > /tmp/boot_output.txt 2>&1 || true
+
+grep "USR" /tmp/boot_output.txt | sed -E 's/USR\\s+[0-9]+\\s+/USR /' | sed 's/^USR //' > /tmp/normalized_output.txt 2>/dev/null || true
+
+echo "===DONE==="
+"""
+
+        script_path = rd / "run_inner.sh"
+        with open(script_path, "w") as f:
+            f.write(inner_script)
+
+        try:
+            print("  -> Running dry-run in container...")
+            proc = subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "--name",
+                    container_name,
+                    "-e",
+                    "AUTOCORR=1",
+                    "-v",
+                    f"{(exam / 'es2.zip').resolve()}:/tmp/es2.zip:ro",
+                    "-v",
+                    f"{script_path.resolve()}:/tmp/run_inner.sh:ro",
+                    DOCKER_IMAGE,
+                    "bash",
+                    "/tmp/run_inner.sh",
+                ],
+                text=True,
+                timeout=120,
+            )
+
+            for artifact in [
+                "solution.diff",
+                "boot_output.txt",
+                "normalized_output.txt",
+            ]:
+                subprocess.run(
+                    [
+                        "docker",
+                        "cp",
+                        f"{container_name}:/tmp/{artifact}",
+                        str(rd / artifact),
+                    ],
+                    capture_output=True,
+                )
+
+        except subprocess.TimeoutExpired:
+            print(f"  -> TIMEOUT")
+            subprocess.run(["docker", "kill", container_name], capture_output=True)
+            results_summary.append(
+                {"model": model_name, "exam": exam_name, "passed": False}
+            )
+            continue
+        finally:
+            subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+        normalized_output_path = rd / "normalized_output.txt"
+        actual_text = (
+            normalized_output_path.read_text()
+            if normalized_output_path.exists()
+            else ""
+        )
+        actual_lines = [
+            l.strip() for l in actual_text.strip().splitlines() if l.strip()
+        ]
+
+        expected_variants = load_expected_outputs(exam)
+        passed = compare_output(actual_lines, expected_variants)
+
+        print(f"  -> Result: {'PASS ✓' if passed else 'FAIL ✗'}")
+        if not passed:
+            print(f"  -> Actual output:   {actual_lines}")
+            if expected_variants:
+                print(f"  -> Expected output: {expected_variants[0]}")
+
+        diff_path = rd / "solution.diff"
+        diff_text = diff_path.read_text() if diff_path.exists() else ""
+
+        result_data = {
+            "passed": passed,
+            "output": actual_lines,
+            "expected": expected_variants[0] if expected_variants else [],
+            "diff": diff_text,
+            "error": None,
+        }
+        with open(rd / "result.json", "w") as f:
+            json.dump(result_data, f, indent=2)
+
+        results_summary.append(
+            {"model": model_name, "exam": exam_name, "passed": passed}
+        )
+
+    print(f"\n{'=' * 60}")
+    print("SUMMARY (dry-run)")
+    print(f"{'=' * 60}")
+    for r in results_summary:
+        status = "PASS" if r["passed"] else "FAIL"
+        print(f"{r['model']:<30} {r['exam']:<20} {status}")
+
+    print("\n✓ Eval dry-run complete!")
+
+
 def main():
     global RESULTS_DIR, EXAMS_DIR, MODELS_CONFIG
 
@@ -523,7 +711,7 @@ def main():
     parser.add_argument(
         "--timeout",
         type=int,
-        default=30*60,
+        default=30 * 60,
         help="Timeout per agent run in seconds (default: 30 minutes)",
     )
     parser.add_argument(
@@ -541,9 +729,14 @@ def main():
         "--exam", type=str, default=None, help="Run only this exam (by directory name)"
     )
     parser.add_argument(
-        "--dry-run",
+        "--model-dry-run",
         action="store_true",
         help="Test opencode config for a model without running evaluation (requires --model)",
+    )
+    parser.add_argument(
+        "--eval-dry-run",
+        action="store_true",
+        help="Run evaluation pipeline without executing opencode (creates dummy dry-run.cpp for diff)",
     )
     args = parser.parse_args()
 
@@ -579,10 +772,10 @@ def main():
             print(f"ERROR: Model '{args.model}' not found in config")
             sys.exit(1)
 
-    # Dry-run mode: test opencode config and exit
-    if args.dry_run:
+    # Model dry-run mode: test opencode config and exit
+    if args.model_dry_run:
         if not args.model:
-            print("ERROR: --dry-run requires --model to be specified")
+            print("ERROR: --model-dry-run requires --model to be specified")
             sys.exit(1)
 
         model = models[0]
@@ -633,10 +826,15 @@ def main():
         print("Return code:", result.returncode)
 
         if result.returncode == 0:
-            print("\n✓ Dry-run successful!")
+            print("\n✓ Model dry-run successful!")
         else:
-            print("\n✗ Dry-run failed!")
+            print("\n✗ Model dry-run failed!")
             sys.exit(1)
+        return
+
+    # Eval dry-run mode: run pipeline without opencode
+    if args.eval_dry_run:
+        run_eval_dry_run(args)
         return
 
     # Discover exams
