@@ -45,9 +45,9 @@ The benchmark is driven by a TOML configuration file allowing for easy testing o
 
 ```toml
 [[model]]
-name = "claude-3-5-sonnet"
-provider = "openrouter"
-model_id = "anthropic/claude-3.5-sonnet"
+name = "claude-4.5-sonnet"
+provider = "anthropic"
+model_id = "claude-4.5-sonnet"
 
 [[model]]
 name = "grok-code-fast-1"
@@ -55,9 +55,9 @@ provider = "openrouter"
 model_id = "x-ai/grok-code-fast-1"
 
 [[model]]
-name = "glm-4-coding"
-provider = "glm-coding"
-model_id = "glm-4"
+name = "glm-4.7"
+provider = "zai-coding-plan"
+model_id = "glm-4.7"
 ```
 
 ### 📊 Results Structure

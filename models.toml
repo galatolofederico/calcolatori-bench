@@ -7,3 +7,8 @@ model_id = "x-ai/grok-code-fast-1"
 name = "glm-5"
 provider = "openrouter"
 model_id = "z-ai/glm-5"
+
+[[model]]
+name = "glm-4.7"
+provider = "zai-coding-plan"
+model_id = "glm-4.7"

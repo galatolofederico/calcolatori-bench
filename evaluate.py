@@ -28,9 +28,9 @@ PROVIDER_CONFIG = {
         "env_var": "OPENROUTER_API_KEY",
         "provider_id": "openrouter",
     },
-    "glm-coding": {
+    "zai-coding-plan": {
         "env_var": "GLM_CODING_API_KEY",
-        "provider_id": "zai",
+        "provider_id": "zai-coding-plan",
     },
     "anthropic": {
         "env_var": "ANTHROPIC_API_KEY",
