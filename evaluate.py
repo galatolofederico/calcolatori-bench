@@ -466,13 +466,52 @@ echo "===DONE==="
     except subprocess.TimeoutExpired:
         print(f"  -> TIMEOUT after {timeout_agent}s")
         (rd / "error.txt").write_text(f"Agent timed out after {timeout_agent}s")
+        for artifact in [
+            "solution.diff",
+            "boot_output.txt",
+            "normalized_output.txt",
+            "agent_output.log",
+        ]:
+            subprocess.run(
+                [
+                    "docker",
+                    "cp",
+                    f"{container_name}:/tmp/{artifact}",
+                    str(rd / artifact),
+                ],
+                capture_output=True,
+            )
         subprocess.run(["docker", "kill", container_name], capture_output=True)
         subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+        diff_text = ""
+        diff_path = rd / "solution.diff"
+        if diff_path.exists():
+            diff_text = diff_path.read_text()
+        boot_output = ""
+        boot_path = rd / "boot_output.txt"
+        if boot_path.exists():
+            boot_output = boot_path.read_text()
+        agent_output = ""
+        agent_output_path = rd / "agent_output.log"
+        if agent_output_path.exists():
+            agent_output = agent_output_path.read_text()
+        normalized_output_path = rd / "normalized_output.txt"
+        actual_text = (
+            normalized_output_path.read_text()
+            if normalized_output_path.exists()
+            else ""
+        )
+        actual_lines = [
+            l.strip() for l in actual_text.strip().splitlines() if l.strip()
+        ]
+        expected_variants = load_expected_outputs(exam_dir)
         result_data = {
             "passed": False,
-            "output": "",
-            "expected": "",
-            "diff": "",
+            "output": actual_lines,
+            "expected": expected_variants[0] if expected_variants else [],
+            "boot_output": boot_output,
+            "agent_output": agent_output,
+            "diff": diff_text,
             "duration_seconds": timeout_agent,
             "error": f"Timeout after {timeout_agent}s",
         }
