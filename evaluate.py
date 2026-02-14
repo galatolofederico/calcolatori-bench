@@ -100,17 +100,22 @@ def normalize_output(text: str) -> list[str]:
     """Extract and normalize USR lines from output for comparison.
 
     Applies: grep "USR" | sed -E 's/USR\\s+[0-9]+\\s+/USR /'
-    Then strips the "USR " prefix so we can compare with es2.out.0 which has no "USR" prefix.
+    Then strips the "USR " prefix so we can compare with es2.out.0.
+
+    Note: AUTOCORR=1 must be set at compile time (adds -DAUTOCORR which
+    redirects video output to the log as USR level lines) AND at runtime
+    (enables -nographic in the boot script so output goes to stdout).
     """
     lines = []
     for line in text.splitlines():
         if "USR" in line:
-            # Apply the sed transformation
+            # Apply the sed transformation: strip "USR <number> " prefix
             normalized = re.sub(r'USR\s+[0-9]+\s+', 'USR ', line.strip())
             # Strip the "USR " prefix to match es2.out.0 format
             if normalized.startswith("USR "):
                 normalized = normalized[4:]
-            lines.append(normalized)
+            if normalized:
+                lines.append(normalized)
     return lines
 
 
@@ -195,7 +200,7 @@ Instructions:
 3. Implement the solution by replacing the "SOLUZIONE" markers with your code.
 4. Run `make` to compile the code. Fix any compilation errors.
 5. IMPORTANT: NEVER run `boot` directly. ALWAYS use `timeout 10s boot` to test your solution.
-6. Check if the output looks correct.
+6. The environment variable AUTOCORR=1 is already set. This causes video output to appear in the log as lines starting with "USR". Check those lines to verify correctness.
 7. If there are errors, analyze them and fix your solution.
 8. Repeat steps 4-7 until the solution works correctly.
 
@@ -258,13 +263,17 @@ git diff > /tmp/solution.diff
 git add -A
 git diff --cached >> /tmp/solution.diff
 
-# Now run the verification
+# Now run the verification (AUTOCORR=1 is set in the container env)
+# AUTOCORR=1 must be set at both compile time (adds -DAUTOCORR to redirect
+# video output to log as USR level) and runtime (enables -nographic in boot)
+export AUTOCORR=1
 make clean 2>&1 || true
 make 2>&1 || echo "MAKE_FAILED"
 timeout 10s boot > /tmp/boot_output.txt 2>&1 || true
 
-# Extract and normalize USR lines
-grep "USR" /tmp/boot_output.txt | sed -E 's/USR\\s+[0-9]+\\s+/USR /' > /tmp/normalized_output.txt 2>/dev/null || true
+# Extract and normalize USR lines, then strip the "USR " prefix
+# to match the format of es2.out.0
+grep "USR" /tmp/boot_output.txt | sed -E 's/USR\\s+[0-9]+\\s+/USR /' | sed 's/^USR //' > /tmp/normalized_output.txt 2>/dev/null || true
 
 echo "===DONE==="
 """
@@ -332,12 +341,10 @@ echo "===DONE==="
     else:
         actual_text = ""
 
-    # Parse actual output lines - strip "USR " prefix to match es2.out.0 format
+    # Parse actual output lines (USR prefix already stripped in container script)
     actual_lines = []
     for line in actual_text.strip().splitlines():
         stripped = line.strip()
-        if stripped.startswith("USR "):
-            stripped = stripped[4:]
         if stripped:
             actual_lines.append(stripped)
 
