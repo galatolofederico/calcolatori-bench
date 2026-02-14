@@ -255,6 +255,23 @@ cd /work
 unzip -o /tmp/es2.zip
 cd /work/es2/nucleo
 
+# Create .gitignore to only track relevant source files
+cat > .gitignore << 'GITIGNORE'
+# Ignore everything by default
+*
+
+# But track source files
+!*.cpp
+!*.s
+!*.h
+!*.asm
+!*.c
+!.gitignore
+
+# Don't ignore directories (needed for git to traverse)
+!*/
+GITIGNORE
+
 # Initialize git repo to track changes
 git init
 git config user.email "agent@bench.local"
