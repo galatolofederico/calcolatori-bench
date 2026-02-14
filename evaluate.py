@@ -277,7 +277,7 @@ cp /tmp/opencode.json /work/es2/nucleo/opencode.json
 export OPENROUTER_API_KEY="$OPENROUTER_API_KEY"
 cd /work/es2/nucleo
 
-opencode -p '{prompt_escaped}' --model '{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
+opencode run '{prompt_escaped}' --model '{model["provider"]}/{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
 
 # Save the diff
 git diff > /tmp/solution.diff
