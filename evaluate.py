@@ -328,17 +328,12 @@ echo "===DONE==="
                 "bash",
                 "/tmp/run_inner.sh",
             ],
-            capture_output=True,
             text=True,
             timeout=timeout_agent,
         )
 
-        agent_stdout = proc.stdout
-        agent_stderr = proc.stderr
-
-        # Save full logs
-        (rd / "agent_stdout.log").write_text(agent_stdout)
-        (rd / "agent_stderr.log").write_text(agent_stderr)
+        agent_stdout = ""
+        agent_stderr = ""
 
         # Copy artifacts out of the container
         for artifact in [
