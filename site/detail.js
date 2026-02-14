@@ -63,7 +63,10 @@ function renderExams(modelName, data) {
             <div class="exam-card ${statusClass}">
                 <div class="exam-header">
                     <span class="exam-name">${esc(exam)}</span>
-                    <span class="exam-status">${statusText}</span>
+                    <div class="exam-meta">
+                        ${renderDuration(result.duration_seconds)}
+                        <span class="exam-status">${statusText}</span>
+                    </div>
                 </div>
                 <div class="exam-details">
                     ${renderOutputSection('Expected Output', result.expected)}
@@ -75,6 +78,27 @@ function renderExams(modelName, data) {
             </div>
         `;
     }).join('');
+}
+
+function renderDuration(seconds) {
+    if (seconds === null || seconds === undefined) {
+        return '';
+    }
+    
+    let display;
+    if (seconds < 60) {
+        display = `${seconds}s`;
+    } else if (seconds < 3600) {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        display = `${mins}m ${secs}s`;
+    } else {
+        const hours = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        display = `${hours}h ${mins}m`;
+    }
+    
+    return `<span class="exam-duration">${display}</span>`;
 }
 
 function renderOutputSection(title, output) {

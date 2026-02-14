@@ -44,6 +44,7 @@ def load_results(results_dir: Path) -> list[dict]:
                         "expected": data.get("expected", []),
                         "boot_output": data.get("boot_output", ""),
                         "agent_output": data.get("agent_output", ""),
+                        "duration_seconds": data.get("duration_seconds"),
                     }
                 )
     return results
@@ -86,6 +87,7 @@ def build_leaderboard_data(results: list[dict]) -> dict:
                     "expected": result["expected"],
                     "boot_output": result["boot_output"],
                     "agent_output": result["agent_output"],
+                    "duration_seconds": result["duration_seconds"],
                 }
             else:
                 exam_results[exam][model] = {
