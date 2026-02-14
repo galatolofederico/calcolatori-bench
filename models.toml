@@ -1,12 +1,17 @@
 [[model]]
-name = "grok-code-fast-1"
+name = "grok-code-fast-1-openrouter"
 provider = "openrouter"
 model_id = "x-ai/grok-code-fast-1"
 
 [[model]]
-name = "glm-5"
+name = "glm-5-openrouter"
 provider = "openrouter"
 model_id = "z-ai/glm-5"
+
+[[model]]
+name = "minimax-m2.5-openrouter"
+provider = "openrouter"
+model_id = "minimax/minimax-m2.5"
 
 [[model]]
 name = "glm-4.7"

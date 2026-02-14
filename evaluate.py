@@ -15,6 +15,7 @@ import re
 import shutil
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -378,6 +379,7 @@ echo "===DONE==="
     try:
         # Start the container
         print("  -> Running agent in container (this may take a while)...")
+        start_time = time.time()
         proc = subprocess.run(
             [
                 "docker",
@@ -403,6 +405,7 @@ echo "===DONE==="
             text=True,
             timeout=timeout_agent,
         )
+        duration_seconds = time.time() - start_time
 
         agent_stdout = ""
         agent_stderr = ""
@@ -434,6 +437,7 @@ echo "===DONE==="
             "output": "",
             "expected": "",
             "diff": "",
+            "duration_seconds": timeout_agent,
             "error": f"Timeout after {timeout_agent}s",
         }
         with open(rd / "result.json", "w") as f:
@@ -481,11 +485,19 @@ echo "===DONE==="
     if boot_path.exists():
         boot_output = boot_path.read_text()
 
+    # Read agent output
+    agent_output = ""
+    agent_output_path = rd / "agent_output.log"
+    if agent_output_path.exists():
+        agent_output = agent_output_path.read_text()
+
     result_data = {
         "passed": passed,
         "output": actual_lines,
         "expected": expected_variants[0] if expected_variants else [],
         "boot_output": boot_output,
+        "agent_output": agent_output,
+        "duration_seconds": round(duration_seconds, 2),
         "diff": diff_text,
         "error": None,
     }
