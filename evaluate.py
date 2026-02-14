@@ -311,7 +311,9 @@ Instructions:
 7. If there are errors, analyze them and fix your solution.
 8. Repeat steps 4-7 until the solution works correctly.
 
-Remember: ALWAYS use `timeout 10s boot` instead of `boot` - this is critical to avoid hanging!
+CRITICAL RULES:
+- NEVER use the `git` command for any reason during execution. Do not run git status, git diff, git log, git commit, or any other git subcommands.
+- ALWAYS use `timeout 10s boot` instead of `boot` - this is critical to avoid hanging!
 """
 
     # Create a container and run the evaluation
