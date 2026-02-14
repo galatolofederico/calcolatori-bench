@@ -3,7 +3,7 @@
 calcolatori-bench: LLM benchmark for the Calcolatori Elettronici course.
 
 Evaluates LLM agents (via opencode) on exam exercise 2 (nucleo kernel exercises).
-For each model × exam combination, spawns a Docker container, runs the agent,
+For each model x exam combination, spawns a Docker container, runs the agent,
 then verifies the output.
 """
 
@@ -23,12 +23,59 @@ RESULTS_DIR = Path("results")
 EXAMS_DIR = Path("exams")
 MODELS_CONFIG = Path("models.toml")
 
+PROVIDER_CONFIG = {
+    "openrouter": {
+        "env_var": "OPENROUTER_API_KEY",
+        "provider_id": "openrouter",
+    },
+    "glm-coding": {
+        "env_var": "GLM_CODING_API_KEY",
+        "provider_id": "zai",
+    },
+    "anthropic": {
+        "env_var": "ANTHROPIC_API_KEY",
+        "provider_id": "anthropic",
+    },
+    "openai": {
+        "env_var": "OPENAI_API_KEY",
+        "provider_id": "openai",
+    },
+}
+
 
 def load_models(config_path: Path) -> list[dict]:
     """Load model configurations from TOML file."""
     with open(config_path, "rb") as f:
         config = tomllib.load(f)
     return config.get("model", [])
+
+
+def get_provider_config(provider_name: str) -> dict:
+    """Get provider configuration by name."""
+    if provider_name not in PROVIDER_CONFIG:
+        raise ValueError(
+            f"Unknown provider: {provider_name}. "
+            f"Available: {list(PROVIDER_CONFIG.keys())}"
+        )
+    return PROVIDER_CONFIG[provider_name]
+
+
+def load_api_key(provider_name: str) -> str:
+    """Load API key for a provider from environment or .env file."""
+    provider_config = get_provider_config(provider_name)
+    env_var = provider_config["env_var"]
+
+    api_key = os.environ.get(env_var, "")
+
+    env_path = Path(".env")
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith(f"{env_var}="):
+                api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                break
+
+    return api_key
 
 
 def discover_exams(exams_dir: Path) -> list[Path]:
@@ -72,20 +119,24 @@ def extract_pdf_text(pdf_path: Path) -> str:
 
 def generate_opencode_config(model: dict, api_key: str) -> dict:
     """Generate an opencode.json configuration for the given model."""
-    provider = model["provider"]
+    provider_name = model["provider"]
+    provider_config = get_provider_config(provider_name)
+    provider_id = provider_config["provider_id"]
     model_id = model["model_id"]
 
     config = {
         "$schema": "https://opencode.ai/config.json",
-        "provider": {provider: {"models": {model_id: {}}}},
+        "provider": {provider_id: {"models": {model_id: {}}}},
     }
     return config
 
 
 def generate_auth_json(model: dict, api_key: str) -> dict:
     """Generate the auth.json for opencode credentials."""
-    provider = model["provider"]
-    return {provider: {"api_key": api_key}}
+    provider_name = model["provider"]
+    provider_config = get_provider_config(provider_name)
+    provider_id = provider_config["provider_id"]
+    return {provider_id: {"api_key": api_key}}
 
 
 def normalize_output(text: str) -> list[str]:
@@ -168,6 +219,10 @@ def run_exam(
     """
     model_name = model["name"]
     exam_name = exam_dir.name
+    provider_name = model["provider"]
+    provider_config = get_provider_config(provider_name)
+    env_var = provider_config["env_var"]
+    provider_id = provider_config["provider_id"]
 
     print(f"\n{'=' * 60}")
     print(f"  Model: {model_name}")
@@ -291,10 +346,10 @@ cp /tmp/auth.json ~/.local/share/opencode/auth.json
 cp /tmp/opencode.json /work/es2/nucleo/opencode.json
 
 # Run opencode agent in non-interactive mode
-export OPENROUTER_API_KEY="$OPENROUTER_API_KEY"
+export {env_var}="${env_var}"
 cd /work/es2/nucleo
 
-opencode run '{prompt_escaped}' --model '{model["provider"]}/{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
+opencode run '{prompt_escaped}' --model '{provider_id}/{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
 
 # Save the diff
 git diff > /tmp/solution.diff
@@ -330,7 +385,7 @@ echo "===DONE==="
                 "--name",
                 container_name,
                 "-e",
-                f"OPENROUTER_API_KEY={api_key}",
+                f"{env_var}={api_key}",
                 "-e",
                 "AUTOCORR=1",
                 "-v",
@@ -491,23 +546,26 @@ def main():
     EXAMS_DIR = args.exams
     MODELS_CONFIG = args.models
 
-    # Load API key from .env
-    env_path = Path(".env")
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if line.startswith("OPENROUTER_API_KEY="):
-                api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
-    if not api_key:
-        print("ERROR: OPENROUTER_API_KEY not found in .env or environment")
-        sys.exit(1)
-
     # Load models
     models = load_models(MODELS_CONFIG)
     if not models:
         print("ERROR: No models found in config")
         sys.exit(1)
+
+    # Pre-validate all providers and load API keys
+    model_api_keys = {}
+    for model in models:
+        provider = model["provider"]
+        try:
+            api_key = load_api_key(provider)
+            if not api_key:
+                env_var = get_provider_config(provider)["env_var"]
+                print(f"ERROR: {env_var} not found in .env or environment")
+                sys.exit(1)
+            model_api_keys[model["name"]] = api_key
+        except ValueError as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
 
     # Filter model if specified
     if args.model:
@@ -566,7 +624,9 @@ def main():
                 )
                 continue
 
-            result = run_exam(model, exam, api_key, timeout_agent=args.timeout)
+            result = run_exam(
+                model, exam, model_api_keys[model_name], timeout_agent=args.timeout
+            )
             results_summary.append(
                 {
                     "model": model_name,
