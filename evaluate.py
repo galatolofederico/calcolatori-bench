@@ -124,6 +124,28 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
     provider_config = get_provider_config(provider_name)
     provider_id = provider_config["provider_id"]
     model_id = model["model_id"]
+    shortcut = model.get("shortcut")
+
+    if provider_name == "openrouter" and shortcut:
+        shortcut_provider_id = "openrouter-shortcut"
+        full_model_id = f"{model_id}:{shortcut}"
+        config = {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": "allow",
+            "provider": {
+                shortcut_provider_id: {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "options": {"baseURL": "https://openrouter.ai/api/v1"},
+                    "models": {
+                        full_model_id: {
+                            "id": full_model_id,
+                            "name": f"{model_id} ({shortcut})",
+                        }
+                    },
+                }
+            },
+        }
+        return config
 
     config = {
         "$schema": "https://opencode.ai/config.json",
@@ -138,6 +160,11 @@ def generate_auth_json(model: dict, api_key: str) -> dict:
     provider_name = model["provider"]
     provider_config = get_provider_config(provider_name)
     provider_id = provider_config["provider_id"]
+    shortcut = model.get("shortcut")
+
+    if provider_name == "openrouter" and shortcut:
+        provider_id = "openrouter-shortcut"
+
     return {provider_id: {"type": "api", "key": api_key}}
 
 
@@ -225,6 +252,12 @@ def run_exam(
     provider_config = get_provider_config(provider_name)
     env_var = provider_config["env_var"]
     provider_id = provider_config["provider_id"]
+    model_id = model["model_id"]
+    shortcut = model.get("shortcut")
+
+    if provider_name == "openrouter" and shortcut:
+        provider_id = "openrouter-shortcut"
+        model_id = f"{model_id}:{shortcut}"
 
     print(f"\n{'=' * 60}")
     print(f"  Model: {model_name}")
@@ -278,7 +311,9 @@ Instructions:
 7. If there are errors, analyze them and fix your solution.
 8. Repeat steps 4-7 until the solution works correctly.
 
-Remember: ALWAYS use `timeout 10s boot` instead of `boot` - this is critical to avoid hanging!
+CRITICAL RULES:
+- NEVER use the `git` command for any reason during execution. Do not run git status, git diff, git log, git commit, or any other git subcommands.
+- ALWAYS use `timeout 10s boot` instead of `boot` - this is critical to avoid hanging!
 """
 
     # Create a container and run the evaluation
@@ -351,7 +386,7 @@ cp /tmp/opencode.json /work/es2/nucleo/opencode.json
 export {env_var}="${env_var}"
 cd /work/es2/nucleo
 
-opencode run '{prompt_escaped}' --model '{provider_id}/{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
+opencode run '{prompt_escaped}' --model '{provider_id}/{model_id}' 2>&1 | tee /tmp/agent_output.log || true
 
 # Save the diff
 git diff > /tmp/solution.diff
@@ -431,13 +466,52 @@ echo "===DONE==="
     except subprocess.TimeoutExpired:
         print(f"  -> TIMEOUT after {timeout_agent}s")
         (rd / "error.txt").write_text(f"Agent timed out after {timeout_agent}s")
+        for artifact in [
+            "solution.diff",
+            "boot_output.txt",
+            "normalized_output.txt",
+            "agent_output.log",
+        ]:
+            subprocess.run(
+                [
+                    "docker",
+                    "cp",
+                    f"{container_name}:/tmp/{artifact}",
+                    str(rd / artifact),
+                ],
+                capture_output=True,
+            )
         subprocess.run(["docker", "kill", container_name], capture_output=True)
         subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+        diff_text = ""
+        diff_path = rd / "solution.diff"
+        if diff_path.exists():
+            diff_text = diff_path.read_text()
+        boot_output = ""
+        boot_path = rd / "boot_output.txt"
+        if boot_path.exists():
+            boot_output = boot_path.read_text()
+        agent_output = ""
+        agent_output_path = rd / "agent_output.log"
+        if agent_output_path.exists():
+            agent_output = agent_output_path.read_text()
+        normalized_output_path = rd / "normalized_output.txt"
+        actual_text = (
+            normalized_output_path.read_text()
+            if normalized_output_path.exists()
+            else ""
+        )
+        actual_lines = [
+            l.strip() for l in actual_text.strip().splitlines() if l.strip()
+        ]
+        expected_variants = load_expected_outputs(exam_dir)
         result_data = {
             "passed": False,
-            "output": "",
-            "expected": "",
-            "diff": "",
+            "output": actual_lines,
+            "expected": expected_variants[0] if expected_variants else [],
+            "boot_output": boot_output,
+            "agent_output": agent_output,
+            "diff": diff_text,
             "duration_seconds": timeout_agent,
             "error": f"Timeout after {timeout_agent}s",
         }
@@ -796,10 +870,20 @@ def main():
         provider = model["provider"]
         provider_config = get_provider_config(provider)
         api_key = model_api_keys[model_name]
+        shortcut = model.get("shortcut")
+
+        dry_run_provider_id = provider_config["provider_id"]
+        dry_run_model_id = model["model_id"]
+        if provider == "openrouter" and shortcut:
+            dry_run_provider_id = "openrouter-shortcut"
+            dry_run_model_id = f"{dry_run_model_id}:{shortcut}"
 
         print(f"Dry-run for model: {model_name}")
         print(f"Provider: {provider}")
-        print(f"Provider ID: {provider_config['provider_id']}")
+        print(f"Provider ID: {dry_run_provider_id}")
+        print(f"Model ID: {dry_run_model_id}")
+        if shortcut:
+            print(f"Shortcut: {shortcut}")
         print(f"Env var: {provider_config['env_var']}")
         print(
             f"API key: {'*' * 8}{api_key[-4:]}"
@@ -826,7 +910,7 @@ def main():
                 "run",
                 test_prompt,
                 "--model",
-                f"{provider_config['provider_id']}/{model['model_id']}",
+                f"{dry_run_provider_id}/{dry_run_model_id}",
             ],
             capture_output=True,
             text=True,
