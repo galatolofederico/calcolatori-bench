@@ -136,7 +136,7 @@ def generate_auth_json(model: dict, api_key: str) -> dict:
     provider_name = model["provider"]
     provider_config = get_provider_config(provider_name)
     provider_id = provider_config["provider_id"]
-    return {provider_id: {"api_key": api_key}}
+    return {provider_id: {"type": "api", "key": api_key}}
 
 
 def normalize_output(text: str) -> list[str]:
