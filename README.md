@@ -35,18 +35,29 @@ The evaluation pipeline for each Model-Exam pair proceeds as follows:
 
 The benchmark is driven by a TOML configuration file allowing for easy testing of different models and parameters.
 
+**Supported providers:**
+- `openrouter` - Uses `OPENROUTER_API_KEY`
+- `glm-coding` - Uses `GLM_CODING_API_KEY` (Z.AI GLM Coding Plan)
+- `anthropic` - Uses `ANTHROPIC_API_KEY`
+- `openai` - Uses `OPENAI_API_KEY`
+
 **`models.toml` example:**
 
 ```toml
-[claude-3-5-sonnet]
-provider = "openrouter"
-model_name = "anthropic/claude-3.5-sonnet"
-temperature = 0.7
+[[model]]
+name = "claude-4.5-sonnet"
+provider = "anthropic"
+model_id = "claude-4.5-sonnet"
 
 [[model]]
 name = "grok-code-fast-1"
 provider = "openrouter"
 model_id = "x-ai/grok-code-fast-1"
+
+[[model]]
+name = "glm-4.7"
+provider = "zai-coding-plan"
+model_id = "glm-4.7"
 ```
 
 ### 📊 Results Structure

@@ -3,7 +3,7 @@
 calcolatori-bench: LLM benchmark for the Calcolatori Elettronici course.
 
 Evaluates LLM agents (via opencode) on exam exercise 2 (nucleo kernel exercises).
-For each model × exam combination, spawns a Docker container, runs the agent,
+For each model x exam combination, spawns a Docker container, runs the agent,
 then verifies the output.
 """
 
@@ -23,12 +23,59 @@ RESULTS_DIR = Path("results")
 EXAMS_DIR = Path("exams")
 MODELS_CONFIG = Path("models.toml")
 
+PROVIDER_CONFIG = {
+    "openrouter": {
+        "env_var": "OPENROUTER_API_KEY",
+        "provider_id": "openrouter",
+    },
+    "zai-coding-plan": {
+        "env_var": "GLM_CODING_API_KEY",
+        "provider_id": "zai-coding-plan",
+    },
+    "anthropic": {
+        "env_var": "ANTHROPIC_API_KEY",
+        "provider_id": "anthropic",
+    },
+    "openai": {
+        "env_var": "OPENAI_API_KEY",
+        "provider_id": "openai",
+    },
+}
+
 
 def load_models(config_path: Path) -> list[dict]:
     """Load model configurations from TOML file."""
     with open(config_path, "rb") as f:
         config = tomllib.load(f)
     return config.get("model", [])
+
+
+def get_provider_config(provider_name: str) -> dict:
+    """Get provider configuration by name."""
+    if provider_name not in PROVIDER_CONFIG:
+        raise ValueError(
+            f"Unknown provider: {provider_name}. "
+            f"Available: {list(PROVIDER_CONFIG.keys())}"
+        )
+    return PROVIDER_CONFIG[provider_name]
+
+
+def load_api_key(provider_name: str) -> str:
+    """Load API key for a provider from environment or .env file."""
+    provider_config = get_provider_config(provider_name)
+    env_var = provider_config["env_var"]
+
+    api_key = os.environ.get(env_var, "")
+
+    env_path = Path(".env")
+    if env_path.exists():
+        for line in env_path.read_text().splitlines():
+            line = line.strip()
+            if line.startswith(f"{env_var}="):
+                api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
+                break
+
+    return api_key
 
 
 def discover_exams(exams_dir: Path) -> list[Path]:
@@ -72,20 +119,24 @@ def extract_pdf_text(pdf_path: Path) -> str:
 
 def generate_opencode_config(model: dict, api_key: str) -> dict:
     """Generate an opencode.json configuration for the given model."""
-    provider = model["provider"]
+    provider_name = model["provider"]
+    provider_config = get_provider_config(provider_name)
+    provider_id = provider_config["provider_id"]
     model_id = model["model_id"]
 
     config = {
         "$schema": "https://opencode.ai/config.json",
-        "provider": {provider: {"models": {model_id: {}}}},
+        "provider": {provider_id: {"models": {model_id: {}}}},
     }
     return config
 
 
 def generate_auth_json(model: dict, api_key: str) -> dict:
     """Generate the auth.json for opencode credentials."""
-    provider = model["provider"]
-    return {provider: {"api_key": api_key}}
+    provider_name = model["provider"]
+    provider_config = get_provider_config(provider_name)
+    provider_id = provider_config["provider_id"]
+    return {provider_id: {"type": "api", "key": api_key}}
 
 
 def normalize_output(text: str) -> list[str]:
@@ -151,7 +202,7 @@ def build_docker_image():
             "container/",
         ],
         capture_output=False,
-        timeout=600,
+        timeout=30 * 60,
     )
     if result.returncode != 0:
         print("ERROR: Failed to build Docker image")
@@ -168,6 +219,10 @@ def run_exam(
     """
     model_name = model["name"]
     exam_name = exam_dir.name
+    provider_name = model["provider"]
+    provider_config = get_provider_config(provider_name)
+    env_var = provider_config["env_var"]
+    provider_id = provider_config["provider_id"]
 
     print(f"\n{'=' * 60}")
     print(f"  Model: {model_name}")
@@ -255,6 +310,23 @@ cd /work
 unzip -o /tmp/es2.zip
 cd /work/es2/nucleo
 
+# Create .gitignore to only track relevant source files
+cat > .gitignore << 'GITIGNORE'
+# Ignore everything by default
+*
+
+# But track source files
+!*.cpp
+!*.s
+!*.h
+!*.asm
+!*.c
+!.gitignore
+
+# Don't ignore directories (needed for git to traverse)
+!*/
+GITIGNORE
+
 # Initialize git repo to track changes
 git init
 git config user.email "agent@bench.local"
@@ -274,10 +346,10 @@ cp /tmp/auth.json ~/.local/share/opencode/auth.json
 cp /tmp/opencode.json /work/es2/nucleo/opencode.json
 
 # Run opencode agent in non-interactive mode
-export OPENROUTER_API_KEY="$OPENROUTER_API_KEY"
+export {env_var}="${env_var}"
 cd /work/es2/nucleo
 
-opencode run '{prompt_escaped}' --model '{model["provider"]}/{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
+opencode run '{prompt_escaped}' --model '{provider_id}/{model["model_id"]}' 2>&1 | tee /tmp/agent_output.log || true
 
 # Save the diff
 git diff > /tmp/solution.diff
@@ -313,7 +385,7 @@ echo "===DONE==="
                 "--name",
                 container_name,
                 "-e",
-                f"OPENROUTER_API_KEY={api_key}",
+                f"{env_var}={api_key}",
                 "-e",
                 "AUTOCORR=1",
                 "-v",
@@ -424,6 +496,194 @@ echo "===DONE==="
     return result_data
 
 
+def run_eval_dry_run(args):
+    """Run evaluation pipeline without opencode - for testing infrastructure."""
+    model_name = "dry-run"
+
+    exams = discover_exams(EXAMS_DIR)
+    if not exams:
+        print("ERROR: No exams found")
+        sys.exit(1)
+
+    if args.exam:
+        exams = [e for e in exams if e.name == args.exam]
+        if not exams:
+            print(f"ERROR: Exam '{args.exam}' not found")
+            sys.exit(1)
+
+    print(f"Eval dry-run mode - skipping opencode execution")
+    print(f"Exams:  {[e.name for e in exams]}")
+
+    if not check_docker_image():
+        print(f"ERROR: Docker image '{DOCKER_IMAGE}' does not exist.")
+        print("Run 'python evaluate.py --build' to build it.")
+        sys.exit(1)
+
+    results_summary = []
+    for exam in exams:
+        exam_name = exam.name
+
+        print(f"\n{'=' * 60}")
+        print(f"  Exam:  {exam_name} (dry-run)")
+        print(f"{'=' * 60}")
+
+        rd = result_dir(model_name, exam_name)
+        rd.mkdir(parents=True, exist_ok=True)
+
+        container_name = f"bench-dry-run-{exam_name}".replace(".", "-")
+        subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+        print("  -> Starting container...")
+
+        inner_script = """#!/bin/bash
+set -e
+
+cd /work
+
+unzip -o /tmp/es2.zip
+cd /work/es2/nucleo
+
+cat > .gitignore << 'GITIGNORE'
+*
+!*.cpp
+!*.s
+!*.h
+!*.asm
+!*.c
+!.gitignore
+!dry-run.cpp
+!*/
+GITIGNORE
+
+git init
+git config user.email "agent@bench.local"
+git config user.name "Agent"
+git add -A
+git commit -m "initial state" --allow-empty
+
+git add -A
+git commit -m "before agent" --allow-empty
+
+# Create dummy file to generate a diff
+cat > dry-run.cpp << 'DRYRUN'
+// This is a dry-run placeholder file
+// Created to test git diff functionality
+int dry_run_marker = 42;
+DRYRUN
+
+echo "=== DRY-RUN: Skipping opencode execution ==="
+
+git diff > /tmp/solution.diff
+git add -A
+git diff --cached >> /tmp/solution.diff
+
+export AUTOCORR=1
+make clean 2>&1 || true
+make 2>&1 || echo "MAKE_FAILED"
+timeout 10s boot > /tmp/boot_output.txt 2>&1 || true
+
+grep "USR" /tmp/boot_output.txt | sed -E 's/USR\\s+[0-9]+\\s+/USR /' | sed 's/^USR //' > /tmp/normalized_output.txt 2>/dev/null || true
+
+echo "===DONE==="
+"""
+
+        script_path = rd / "run_inner.sh"
+        with open(script_path, "w") as f:
+            f.write(inner_script)
+
+        try:
+            print("  -> Running dry-run in container...")
+            proc = subprocess.run(
+                [
+                    "docker",
+                    "run",
+                    "--name",
+                    container_name,
+                    "-e",
+                    "AUTOCORR=1",
+                    "-v",
+                    f"{(exam / 'es2.zip').resolve()}:/tmp/es2.zip:ro",
+                    "-v",
+                    f"{script_path.resolve()}:/tmp/run_inner.sh:ro",
+                    DOCKER_IMAGE,
+                    "bash",
+                    "/tmp/run_inner.sh",
+                ],
+                text=True,
+                timeout=120,
+            )
+
+            for artifact in [
+                "solution.diff",
+                "boot_output.txt",
+                "normalized_output.txt",
+            ]:
+                subprocess.run(
+                    [
+                        "docker",
+                        "cp",
+                        f"{container_name}:/tmp/{artifact}",
+                        str(rd / artifact),
+                    ],
+                    capture_output=True,
+                )
+
+        except subprocess.TimeoutExpired:
+            print(f"  -> TIMEOUT")
+            subprocess.run(["docker", "kill", container_name], capture_output=True)
+            results_summary.append(
+                {"model": model_name, "exam": exam_name, "passed": False}
+            )
+            continue
+        finally:
+            subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
+
+        normalized_output_path = rd / "normalized_output.txt"
+        actual_text = (
+            normalized_output_path.read_text()
+            if normalized_output_path.exists()
+            else ""
+        )
+        actual_lines = [
+            l.strip() for l in actual_text.strip().splitlines() if l.strip()
+        ]
+
+        expected_variants = load_expected_outputs(exam)
+        passed = compare_output(actual_lines, expected_variants)
+
+        print(f"  -> Result: {'PASS ✓' if passed else 'FAIL ✗'}")
+        if not passed:
+            print(f"  -> Actual output:   {actual_lines}")
+            if expected_variants:
+                print(f"  -> Expected output: {expected_variants[0]}")
+
+        diff_path = rd / "solution.diff"
+        diff_text = diff_path.read_text() if diff_path.exists() else ""
+
+        result_data = {
+            "passed": passed,
+            "output": actual_lines,
+            "expected": expected_variants[0] if expected_variants else [],
+            "diff": diff_text,
+            "error": None,
+        }
+        with open(rd / "result.json", "w") as f:
+            json.dump(result_data, f, indent=2)
+
+        results_summary.append(
+            {"model": model_name, "exam": exam_name, "passed": passed}
+        )
+
+    print(f"\n{'=' * 60}")
+    print("SUMMARY (dry-run)")
+    print(f"{'=' * 60}")
+    for r in results_summary:
+        status = "PASS" if r["passed"] else "FAIL"
+        print(f"{r['model']:<30} {r['exam']:<20} {status}")
+
+    print("\n✓ Eval dry-run complete!")
+
+
 def main():
     global RESULTS_DIR, EXAMS_DIR, MODELS_CONFIG
 
@@ -451,8 +711,8 @@ def main():
     parser.add_argument(
         "--timeout",
         type=int,
-        default=600,
-        help="Timeout per agent run in seconds (default: 600)",
+        default=30 * 60,
+        help="Timeout per agent run in seconds (default: 30 minutes)",
     )
     parser.add_argument(
         "--build", action="store_true", help="Build the Docker image before running"
@@ -468,23 +728,21 @@ def main():
     parser.add_argument(
         "--exam", type=str, default=None, help="Run only this exam (by directory name)"
     )
+    parser.add_argument(
+        "--model-dry-run",
+        action="store_true",
+        help="Test opencode config for a model without running evaluation (requires --model)",
+    )
+    parser.add_argument(
+        "--eval-dry-run",
+        action="store_true",
+        help="Run evaluation pipeline without executing opencode (creates dummy dry-run.cpp for diff)",
+    )
     args = parser.parse_args()
 
     RESULTS_DIR = args.results
     EXAMS_DIR = args.exams
     MODELS_CONFIG = args.models
-
-    # Load API key from .env
-    env_path = Path(".env")
-    api_key = os.environ.get("OPENROUTER_API_KEY", "")
-    if env_path.exists():
-        for line in env_path.read_text().splitlines():
-            line = line.strip()
-            if line.startswith("OPENROUTER_API_KEY="):
-                api_key = line.split("=", 1)[1].strip().strip('"').strip("'")
-    if not api_key:
-        print("ERROR: OPENROUTER_API_KEY not found in .env or environment")
-        sys.exit(1)
 
     # Load models
     models = load_models(MODELS_CONFIG)
@@ -492,12 +750,92 @@ def main():
         print("ERROR: No models found in config")
         sys.exit(1)
 
+    # Pre-validate all providers and load API keys
+    model_api_keys = {}
+    for model in models:
+        provider = model["provider"]
+        try:
+            api_key = load_api_key(provider)
+            if not api_key:
+                env_var = get_provider_config(provider)["env_var"]
+                print(f"ERROR: {env_var} not found in .env or environment")
+                sys.exit(1)
+            model_api_keys[model["name"]] = api_key
+        except ValueError as e:
+            print(f"ERROR: {e}")
+            sys.exit(1)
+
     # Filter model if specified
     if args.model:
         models = [m for m in models if m["name"] == args.model]
         if not models:
             print(f"ERROR: Model '{args.model}' not found in config")
             sys.exit(1)
+
+    # Model dry-run mode: test opencode config and exit
+    if args.model_dry_run:
+        if not args.model:
+            print("ERROR: --model-dry-run requires --model to be specified")
+            sys.exit(1)
+
+        model = models[0]
+        model_name = model["name"]
+        provider = model["provider"]
+        provider_config = get_provider_config(provider)
+        api_key = model_api_keys[model_name]
+
+        print(f"Dry-run for model: {model_name}")
+        print(f"Provider: {provider}")
+        print(f"Provider ID: {provider_config['provider_id']}")
+        print(f"Env var: {provider_config['env_var']}")
+        print(
+            f"API key: {'*' * 8}{api_key[-4:]}"
+            if len(api_key) > 4
+            else "API key too short"
+        )
+        print()
+
+        opencode_config = generate_opencode_config(model, api_key)
+        auth_config = generate_auth_json(model, api_key)
+
+        print("opencode.json:")
+        print(json.dumps(opencode_config, indent=2))
+        print()
+        print("auth.json:")
+        print(json.dumps(auth_config, indent=2))
+        print()
+
+        print("Testing opencode connection...")
+        test_prompt = "Reply with just: OK"
+        result = subprocess.run(
+            [
+                "opencode",
+                "run",
+                test_prompt,
+                "--model",
+                f"{provider_config['provider_id']}/{model['model_id']}",
+            ],
+            capture_output=True,
+            text=True,
+            timeout=60,
+            env={**os.environ, provider_config["env_var"]: api_key},
+        )
+        print("STDOUT:", result.stdout)
+        if result.stderr:
+            print("STDERR:", result.stderr)
+        print("Return code:", result.returncode)
+
+        if result.returncode == 0:
+            print("\n✓ Model dry-run successful!")
+        else:
+            print("\n✗ Model dry-run failed!")
+            sys.exit(1)
+        return
+
+    # Eval dry-run mode: run pipeline without opencode
+    if args.eval_dry_run:
+        run_eval_dry_run(args)
+        return
 
     # Discover exams
     exams = discover_exams(EXAMS_DIR)
@@ -549,7 +887,9 @@ def main():
                 )
                 continue
 
-            result = run_exam(model, exam, api_key, timeout_agent=args.timeout)
+            result = run_exam(
+                model, exam, model_api_keys[model_name], timeout_agent=args.timeout
+            )
             results_summary.append(
                 {
                     "model": model_name,
