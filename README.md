@@ -8,7 +8,7 @@ It tests an agent's ability to navigate an obscure, highly technical, and strict
 
 ---
 
-### 🇮🇹 The Challenge: The "Italian Job"
+### 🇮🇹 The Challenge
 
 Why is this benchmark harder than your average Python coding test? Because it requires a unique combination of low-level systems knowledge and linguistic flexibility.
 
