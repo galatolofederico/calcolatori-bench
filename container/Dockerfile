@@ -47,10 +47,12 @@ RUN curl -fsSL https://bun.com/install | bash -s "bun-v1.3.9"
 
 # Install patched opencode
 RUN git clone --branch save-metadata https://github.com/galatolofederico/opencode.git /tmp/opencode
-WORKDIR /tmp/opencode/packages/opencode
+WORKDIR /tmp/opencode
 RUN /home/vscode/.bun/bin/bun install
-RUN /home/vscode/.bun/bin/bun link
-
-RUN opencode --version
+WORKDIR /tmp/opencode/packages/opencode
+RUN /home/vscode/.bun/bin/bun run script/build.ts --single
+RUN cp /tmp/opencode/packages/opencode/dist/opencode-linux-x64/bin/opencode /home/vscode/.bun/bin/opencode
 
 ENV PATH="/home/vscode/CE/bin:/home/vscode/.bun/bin:${PATH}"
+
+RUN opencode --version
