@@ -11,9 +11,27 @@ model_id = "z-ai/glm-5"
 shortcut = "nitro"
 
 [[model]]
+name = "glm-4.7-openrouter"
+provider = "openrouter"
+model_id = "z-ai/glm-4.7"
+shortcut = "nitro"
+
+[[model]]
+name = "glm-4.7-flash-openrouter"
+provider = "openrouter"
+model_id = "z-ai/glm-4.7-flash"
+shortcut = "nitro"
+
+[[model]]
 name = "minimax-m2.5-openrouter"
 provider = "openrouter"
 model_id = "minimax/minimax-m2.5"
+shortcut = "nitro"
+
+[[model]]
+name = "kimi-k2.5-openrouter"
+provider = "openrouter"
+model_id = "moonshotai/kimi-k2.5"
 shortcut = "nitro"
 
 [[model]]
