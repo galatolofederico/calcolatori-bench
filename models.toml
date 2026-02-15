@@ -29,6 +29,12 @@ model_id = "minimax/minimax-m2.5"
 shortcut = "nitro"
 
 [[model]]
+name = "kimi-k2.5-openrouter"
+provider = "openrouter"
+model_id = "moonshotai/kimi-k2.5"
+shortcut = "nitro"
+
+[[model]]
 name = "glm-4.7"
 provider = "zai-coding-plan"
 model_id = "glm-4.7"
