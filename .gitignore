@@ -3,6 +3,7 @@ results/**/*
 !results/**/result.json
 
 tmp/
+site/leaderboard_data.json
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
