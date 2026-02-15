@@ -409,6 +409,10 @@ timeout 10s boot > /tmp/boot_output.txt 2>&1 || true
 # to match the format of es2.out.0
 grep "USR" /tmp/boot_output.txt | sed -E 's/USR\\s+[0-9]+\\s+/USR /' | sed 's/^USR //' > /tmp/normalized_output.txt 2>/dev/null || true
 
+# Create artifact zip of es2 folder
+cd /work
+zip -r /tmp/es2_artifact.zip es2 2>/dev/null || true
+
 echo "===DONE==="
 """
 
@@ -457,6 +461,7 @@ echo "===DONE==="
             "normalized_output.txt",
             "agent_output.log",
             "metadata.json",
+            "es2_artifact.zip",
         ]:
             subprocess.run(
                 [
@@ -477,6 +482,7 @@ echo "===DONE==="
             "normalized_output.txt",
             "agent_output.log",
             "metadata.json",
+            "es2_artifact.zip",
         ]:
             subprocess.run(
                 [
@@ -699,6 +705,10 @@ timeout 10s boot > /tmp/boot_output.txt 2>&1 || true
 
 grep "USR" /tmp/boot_output.txt | sed -E 's/USR\\s+[0-9]+\\s+/USR /' | sed 's/^USR //' > /tmp/normalized_output.txt 2>/dev/null || true
 
+# Create artifact zip of es2 folder
+cd /work
+zip -r /tmp/es2_artifact.zip es2 2>/dev/null || true
+
 echo "===DONE==="
 """
 
@@ -732,6 +742,7 @@ echo "===DONE==="
                 "solution.diff",
                 "boot_output.txt",
                 "normalized_output.txt",
+                "es2_artifact.zip",
             ]:
                 subprocess.run(
                     [
