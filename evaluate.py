@@ -240,7 +240,11 @@ def build_docker_image():
 
 
 def run_exam(
-    model: dict, exam_dir: Path, api_key: str, timeout_agent: int = 300
+    model: dict,
+    exam_dir: Path,
+    api_key: str,
+    timeout_agent: int = 300,
+    max_turns: int = 50,
 ) -> dict:
     """Run a single model × exam evaluation.
 
@@ -386,7 +390,7 @@ cp /tmp/opencode.json /work/es2/nucleo/opencode.json
 export {env_var}="${env_var}"
 cd /work/es2/nucleo
 
-opencode run '{prompt_escaped}' --model '{provider_id}/{model_id}' 2>&1 | tee /tmp/agent_output.log || true
+opencode run '{prompt_escaped}' --model '{provider_id}/{model_id}' --max-turns {max_turns} --save-metadata /tmp/metadata.json 2>&1 | tee /tmp/agent_output.log || true
 
 # Save the diff
 git diff > /tmp/solution.diff
@@ -452,6 +456,7 @@ echo "===DONE==="
             "boot_output.txt",
             "normalized_output.txt",
             "agent_output.log",
+            "metadata.json",
         ]:
             subprocess.run(
                 [
@@ -471,6 +476,7 @@ echo "===DONE==="
             "boot_output.txt",
             "normalized_output.txt",
             "agent_output.log",
+            "metadata.json",
         ]:
             subprocess.run(
                 [
@@ -505,6 +511,14 @@ echo "===DONE==="
             l.strip() for l in actual_text.strip().splitlines() if l.strip()
         ]
         expected_variants = load_expected_outputs(exam_dir)
+        turns = None
+        metadata_path = rd / "metadata.json"
+        if metadata_path.exists():
+            try:
+                metadata = json.loads(metadata_path.read_text())
+                turns = metadata.get("turns")
+            except json.JSONDecodeError:
+                pass
         result_data = {
             "passed": False,
             "output": actual_lines,
@@ -513,6 +527,8 @@ echo "===DONE==="
             "agent_output": agent_output,
             "diff": diff_text,
             "duration_seconds": timeout_agent,
+            "turns": turns,
+            "max_turns": max_turns,
             "error": f"Timeout after {timeout_agent}s",
         }
         with open(rd / "result.json", "w") as f:
@@ -566,6 +582,16 @@ echo "===DONE==="
     if agent_output_path.exists():
         agent_output = agent_output_path.read_text()
 
+    # Read metadata for turns count
+    turns = None
+    metadata_path = rd / "metadata.json"
+    if metadata_path.exists():
+        try:
+            metadata = json.loads(metadata_path.read_text())
+            turns = metadata.get("turns")
+        except json.JSONDecodeError:
+            pass
+
     result_data = {
         "passed": passed,
         "output": actual_lines,
@@ -573,6 +599,8 @@ echo "===DONE==="
         "boot_output": boot_output,
         "agent_output": agent_output,
         "duration_seconds": round(duration_seconds, 2),
+        "turns": turns,
+        "max_turns": max_turns,
         "diff": diff_text,
         "error": None,
     }
@@ -802,6 +830,12 @@ def main():
         help="Timeout per agent run in seconds (default: 30 minutes)",
     )
     parser.add_argument(
+        "--max-turns",
+        type=int,
+        default=50,
+        help="Maximum number of agentic turns (default: 50)",
+    )
+    parser.add_argument(
         "--build", action="store_true", help="Build the Docker image before running"
     )
     parser.add_argument(
@@ -986,7 +1020,11 @@ def main():
                 continue
 
             result = run_exam(
-                model, exam, model_api_keys[model_name], timeout_agent=args.timeout
+                model,
+                exam,
+                model_api_keys[model_name],
+                timeout_agent=args.timeout,
+                max_turns=args.max_turns,
             )
             results_summary.append(
                 {
