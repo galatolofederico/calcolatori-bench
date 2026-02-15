@@ -954,6 +954,7 @@ def main():
     # Build image if requested
     if args.build:
         build_docker_image()
+        return
 
     # Check if Docker image exists
     if not check_docker_image():
