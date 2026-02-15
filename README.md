@@ -6,6 +6,8 @@
 
 It tests an agent's ability to navigate an obscure, highly technical, and strictly constrained mixed-language environment (C++ and x86_64 Assembly) with **virtually zero training data contamination**.
 
+> **[📊 Check the Leaderboard](https://galatolofederico.github.io/calcolatori-bench/)**
+
 ---
 
 ### 🇮🇹 The Challenge
