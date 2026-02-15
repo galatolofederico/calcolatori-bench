@@ -843,8 +843,8 @@ def main():
     parser.add_argument(
         "--max-turns",
         type=int,
-        default=50,
-        help="Maximum number of agentic turns (default: 50)",
+        default=100,
+        help="Maximum number of agentic turns (default: 100)",
     )
     parser.add_argument(
         "--build", action="store_true", help="Build the Docker image before running"
