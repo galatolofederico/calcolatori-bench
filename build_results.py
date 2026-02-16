@@ -45,6 +45,8 @@ def load_results(results_dir: Path) -> list[dict]:
                         "boot_output": data.get("boot_output", ""),
                         "agent_output": data.get("agent_output", ""),
                         "duration_seconds": data.get("duration_seconds"),
+                        "actual_turns": data.get("turns"),
+                        "max_turns": data.get("max_turns"),
                     }
                 )
     return results
@@ -88,6 +90,8 @@ def build_leaderboard_data(results: list[dict]) -> dict:
                     "boot_output": result["boot_output"],
                     "agent_output": result["agent_output"],
                     "duration_seconds": result["duration_seconds"],
+                    "actual_turns": result["actual_turns"],
+                    "max_turns": result["max_turns"],
                 }
             else:
                 exam_results[exam][model] = {

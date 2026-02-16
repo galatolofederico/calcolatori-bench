@@ -65,6 +65,7 @@ function renderExams(modelName, data) {
                     <span class="exam-name">${esc(exam)}</span>
                     <div class="exam-meta">
                         ${renderDuration(result.duration_seconds)}
+                        ${renderTurns(result.actual_turns, result.max_turns)}
                         <span class="exam-status">${statusText}</span>
                     </div>
                 </div>
@@ -87,10 +88,10 @@ function renderDuration(seconds) {
     
     let display;
     if (seconds < 60) {
-        display = `${seconds}s`;
+        display = `${seconds.toFixed(2)}s`;
     } else if (seconds < 3600) {
         const mins = Math.floor(seconds / 60);
-        const secs = seconds % 60;
+        const secs = (seconds % 60).toFixed(2);
         display = `${mins}m ${secs}s`;
     } else {
         const hours = Math.floor(seconds / 3600);
@@ -99,6 +100,14 @@ function renderDuration(seconds) {
     }
     
     return `<span class="exam-duration">${display}</span>`;
+}
+
+function renderTurns(actual, max) {
+    if (actual === null || actual === undefined || max === null || max === undefined) {
+        return '';
+    }
+    
+    return `<span class="exam-turns">${actual}/${max} turns</span>`;
 }
 
 function renderOutputSection(title, output) {

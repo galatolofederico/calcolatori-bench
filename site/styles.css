@@ -209,6 +209,12 @@ td {
     font-family: 'SF Mono', Monaco, monospace;
 }
 
+.exam-turns {
+    font-size: 0.8rem;
+    color: #666;
+    font-family: 'SF Mono', Monaco, monospace;
+}
+
 .exam-name {
     font-weight: 600;
     font-size: 1rem;
