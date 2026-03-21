@@ -30,7 +30,7 @@ function renderHeader(modelName, data) {
     const stats = data.model_stats[modelName];
     if (stats) {
         document.getElementById('model-stats').textContent = 
-            `${stats.passed}/${stats.total} exams passed (${stats.percentage}%)`;
+            `${stats.passed}/${stats.total} exams passed (${stats.percentage}%) · ${stats.total_steps}/${stats.max_steps} steps`;
     }
 }
 

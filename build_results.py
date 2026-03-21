@@ -62,10 +62,14 @@ def build_leaderboard_data(results: list[dict]) -> dict:
         model_results = [r for r in results if r["model"] == model]
         passed = sum(1 for r in model_results if r["passed"])
         total = len(model_results)
+        total_steps = sum(r["actual_turns"] or 0 for r in model_results)
+        max_steps = sum(r["max_turns"] or 100 for r in model_results)
         model_stats[model] = {
             "passed": passed,
             "total": total,
             "percentage": round(passed / total * 100, 1) if total > 0 else 0,
+            "total_steps": total_steps,
+            "max_steps": max_steps,
         }
 
     exam_results = {}
