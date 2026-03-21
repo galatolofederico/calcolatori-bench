@@ -142,6 +142,11 @@ def discover_exams(exams_dir: Path) -> list[Path]:
     return exams
 
 
+def sanitize_path(name: str) -> str:
+    """Sanitize a name for use in filesystem paths (replace colons, etc.)."""
+    return re.sub(r"[^\w\-.]", "_", name)
+
+
 def result_key(model_name: str, exam_name: str) -> str:
     """Generate a unique key for a model × exam combination."""
     return f"{model_name}/{exam_name}"
@@ -149,7 +154,7 @@ def result_key(model_name: str, exam_name: str) -> str:
 
 def result_dir(model_name: str, exam_name: str) -> Path:
     """Get the results directory for a model × exam combination."""
-    return RESULTS_DIR / model_name / exam_name
+    return RESULTS_DIR / sanitize_path(model_name) / exam_name
 
 
 def is_cached(model_name: str, exam_name: str) -> bool:
@@ -411,9 +416,7 @@ CRITICAL RULES:
 """
 
     # Create a container and run the evaluation
-    container_name = f"bench-{model_name}-{exam_name}".replace("/", "-").replace(
-        ".", "-"
-    )
+    container_name = re.sub(r"[^a-zA-Z0-9_.-]", "-", f"bench-{model_name}-{exam_name}")
 
     # Clean up any existing container with same name
     subprocess.run(["docker", "rm", "-f", container_name], capture_output=True)
