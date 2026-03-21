@@ -18,6 +18,35 @@ import sys
 import time
 import tomllib
 from pathlib import Path
+from typing import Optional
+
+ENV_VAR_PATTERN = re.compile(r"\$\{([^}]+)\}")
+
+
+def interpolate_env_vars(value: str) -> str:
+    """Interpolate environment variables in a string value.
+    Supports ${VAR_NAME} syntax. Falls back to empty string if var is not set.
+    """
+
+    def replace_var(match):
+        var_name = match.group(1)
+        return os.environ.get(var_name, "")
+
+    return ENV_VAR_PATTERN.sub(replace_var, value)
+
+
+def interpolate_dict_env_vars(d: dict) -> dict:
+    """Recursively interpolate environment variables in dict values."""
+    result = {}
+    for key, value in d.items():
+        if isinstance(value, str):
+            result[key] = interpolate_env_vars(value)
+        elif isinstance(value, dict):
+            result[key] = interpolate_dict_env_vars(value)
+        else:
+            result[key] = value
+    return result
+
 
 DOCKER_IMAGE = "calcolatori-bench"
 RESULTS_DIR = Path("results")
@@ -45,24 +74,49 @@ PROVIDER_CONFIG = {
 
 
 def load_models(config_path: Path) -> list[dict]:
-    """Load model configurations from TOML file."""
+    """Load model configurations from TOML file with env var interpolation."""
     with open(config_path, "rb") as f:
         config = tomllib.load(f)
-    return config.get("model", [])
+    models = config.get("model", [])
+    return [interpolate_dict_env_vars(m) for m in models]
 
 
-def get_provider_config(provider_name: str) -> dict:
-    """Get provider configuration by name."""
+def get_provider_config(provider_name: str, model: Optional[dict] = None) -> dict:
+    """Get provider configuration by name.
+
+    For 'custom' provider, returns config from model definition.
+    """
+    if provider_name == "custom":
+        if model is None:
+            raise ValueError("Custom provider requires model configuration")
+        if "base_url" not in model:
+            raise ValueError("Custom provider requires 'base_url' in model config")
+        return {
+            "provider_id": f"custom-{model['name']}",
+            "base_url": model["base_url"],
+            "is_custom": True,
+        }
     if provider_name not in PROVIDER_CONFIG:
         raise ValueError(
             f"Unknown provider: {provider_name}. "
-            f"Available: {list(PROVIDER_CONFIG.keys())}"
+            f"Available: {list(PROVIDER_CONFIG.keys())} or 'custom'"
         )
     return PROVIDER_CONFIG[provider_name]
 
 
-def load_api_key(provider_name: str) -> str:
-    """Load API key for a provider from environment or .env file."""
+def load_api_key(provider_name: str, model: Optional[dict] = None) -> str:
+    """Load API key for a provider from environment, .env file, or model config.
+
+    For custom providers, reads from model['api_key'] (which may contain ${VAR} refs).
+    """
+    if provider_name == "custom":
+        if model is None:
+            raise ValueError("Custom provider requires model configuration")
+        api_key = model.get("api_key", "")
+        if not api_key:
+            raise ValueError("Custom provider requires 'api_key' in model config")
+        return api_key
+
     provider_config = get_provider_config(provider_name)
     env_var = provider_config["env_var"]
 
@@ -121,10 +175,36 @@ def extract_pdf_text(pdf_path: Path) -> str:
 def generate_opencode_config(model: dict, api_key: str) -> dict:
     """Generate an opencode.json configuration for the given model."""
     provider_name = model["provider"]
-    provider_config = get_provider_config(provider_name)
-    provider_id = provider_config["provider_id"]
+    provider_config = get_provider_config(provider_name, model)
     model_id = model["model_id"]
     shortcut = model.get("shortcut")
+
+    if provider_name == "custom":
+        custom_provider_id = f"custom-{model['name']}"
+        base_url = model["base_url"]
+        config = {
+            "$schema": "https://opencode.ai/config.json",
+            "permission": "allow",
+            "provider": {
+                custom_provider_id: {
+                    "npm": "@ai-sdk/openai-compatible",
+                    "options": {"baseURL": base_url},
+                    "models": {
+                        model_id: {
+                            "id": model_id,
+                            "name": model.get("name", model_id),
+                        }
+                    },
+                }
+            },
+        }
+        if model.get("modalities"):
+            config["provider"][custom_provider_id]["models"][model_id]["modalities"] = (
+                model["modalities"]
+            )
+        return config
+
+    provider_id = provider_config["provider_id"]
 
     if provider_name == "openrouter" and shortcut:
         shortcut_provider_id = "openrouter-shortcut"
@@ -158,9 +238,14 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
 def generate_auth_json(model: dict, api_key: str) -> dict:
     """Generate the auth.json for opencode credentials."""
     provider_name = model["provider"]
-    provider_config = get_provider_config(provider_name)
-    provider_id = provider_config["provider_id"]
+    provider_config = get_provider_config(provider_name, model)
     shortcut = model.get("shortcut")
+
+    if provider_name == "custom":
+        custom_provider_id = f"custom-{model['name']}"
+        return {custom_provider_id: {"type": "api", "key": api_key}}
+
+    provider_id = provider_config["provider_id"]
 
     if provider_name == "openrouter" and shortcut:
         provider_id = "openrouter-shortcut"
@@ -253,11 +338,16 @@ def run_exam(
     model_name = model["name"]
     exam_name = exam_dir.name
     provider_name = model["provider"]
-    provider_config = get_provider_config(provider_name)
-    env_var = provider_config["env_var"]
-    provider_id = provider_config["provider_id"]
+    provider_config = get_provider_config(provider_name, model)
     model_id = model["model_id"]
     shortcut = model.get("shortcut")
+
+    if provider_name == "custom":
+        provider_id = f"custom-{model_name}"
+        env_var = "CUSTOM_API_KEY"
+    else:
+        provider_id = provider_config["provider_id"]
+        env_var = provider_config["env_var"]
 
     if provider_name == "openrouter" and shortcut:
         provider_id = "openrouter-shortcut"
@@ -887,10 +977,15 @@ def main():
     for model in models:
         provider = model["provider"]
         try:
-            api_key = load_api_key(provider)
+            api_key = load_api_key(provider, model)
             if not api_key:
-                env_var = get_provider_config(provider)["env_var"]
-                print(f"ERROR: {env_var} not found in .env or environment")
+                if provider == "custom":
+                    print(
+                        f"ERROR: API key not found for custom model '{model['name']}'"
+                    )
+                else:
+                    env_var = get_provider_config(provider)["env_var"]
+                    print(f"ERROR: {env_var} not found in .env or environment")
                 sys.exit(1)
             model_api_keys[model["name"]] = api_key
         except ValueError as e:
@@ -913,11 +1008,17 @@ def main():
         model = models[0]
         model_name = model["name"]
         provider = model["provider"]
-        provider_config = get_provider_config(provider)
+        provider_config = get_provider_config(provider, model)
         api_key = model_api_keys[model_name]
         shortcut = model.get("shortcut")
 
-        dry_run_provider_id = provider_config["provider_id"]
+        if provider == "custom":
+            dry_run_provider_id = f"custom-{model_name}"
+            env_var = "CUSTOM_API_KEY"
+        else:
+            dry_run_provider_id = provider_config["provider_id"]
+            env_var = provider_config["env_var"]
+
         dry_run_model_id = model["model_id"]
         if provider == "openrouter" and shortcut:
             dry_run_provider_id = "openrouter-shortcut"
@@ -929,7 +1030,10 @@ def main():
         print(f"Model ID: {dry_run_model_id}")
         if shortcut:
             print(f"Shortcut: {shortcut}")
-        print(f"Env var: {provider_config['env_var']}")
+        if provider == "custom":
+            print(f"Base URL: {model.get('base_url', 'N/A')}")
+        else:
+            print(f"Env var: {env_var}")
         print(
             f"API key: {'*' * 8}{api_key[-4:]}"
             if len(api_key) > 4
