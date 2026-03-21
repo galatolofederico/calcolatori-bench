@@ -63,9 +63,10 @@ The benchmark is controlled via a simple TOML configuration file. You can pit di
 **Supported Providers:**
 
 * `openrouter`
-* `glm-coding` (Z.AI GLM Coding Plan)
+* `zai-coding-plan` (Z.AI GLM Coding Plan)
 * `anthropic`
 * `openai`
+* `custom` (for self-hosted or custom endpoints)
 
 **`models.toml` example:**
 
@@ -85,7 +86,6 @@ shortcut = "nitro"  # See shortcuts below
 name = "glm-4.7"
 provider = "zai-coding-plan"
 model_id = "glm-4.7"
-
 ```
 
 **⚡ OpenRouter Shortcuts:**
@@ -93,6 +93,135 @@ model_id = "glm-4.7"
 * `shortcut = "nitro"`: Prioritizes throughput
 * `shortcut = "floor"`: Prioritizes lowest price
 * `shortcut = "free"`: Routes to free tier providers
+
+---
+
+### 🔧 Custom Models
+
+You can configure self-hosted models or custom OpenAI-compatible endpoints using the `custom` provider:
+
+```toml
+[[model]]
+name = "my-local-llama"
+provider = "custom"
+model_id = "llama-3.1-70b"
+base_url = "http://localhost:8000/v1"
+api_key = "${MY_LOCAL_API_KEY}"  # Supports env var interpolation
+
+# Optional: define model capabilities
+[model.modalities]
+input = ["text", "image"]
+output = ["text"]
+```
+
+**Custom Model Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Human-readable identifier for results |
+| `provider` | Yes | Must be `"custom"` |
+| `model_id` | Yes | Model identifier sent to the API |
+| `base_url` | Yes | Base URL for the OpenAI-compatible API |
+| `api_key` | Yes | API key (supports `${ENV_VAR}` interpolation) |
+| `modalities` | No | Model capabilities (text, image input/output) |
+
+**Environment Variable Interpolation:**
+
+All string values in `models.toml` support environment variable interpolation using `${VAR_NAME}` syntax:
+
+```toml
+[[model]]
+name = "production-model"
+provider = "openrouter"
+model_id = "anthropic/claude-3.5-sonnet"
+# API key loaded from OPENROUTER_API_KEY env var
+
+[[model]]
+name = "custom-endpoint"
+provider = "custom"
+model_id = "my-model"
+base_url = "${CUSTOM_BASE_URL}"
+api_key = "${CUSTOM_API_KEY}"
+```
+
+---
+
+### 🚀 Running the Benchmark
+
+#### Prerequisites
+
+1. **Docker** - Required for sandboxed evaluation
+2. **Python 3.11+** - For the evaluation script
+3. **pdftotext** - For extracting exam text (usually via `poppler-utils`)
+
+#### Setup
+
+1. **Build the Docker image:**
+
+```bash
+python evaluate.py --build
+```
+
+2. **Configure API keys:**
+
+Create a `.env` file in the project root:
+
+```bash
+# For OpenRouter models
+OPENROUTER_API_KEY=sk-or-v1-...
+
+# For Z.AI GLM Coding Plan
+GLM_CODING_API_KEY=...
+
+# For Anthropic models
+ANTHROPIC_API_KEY=...
+
+# For OpenAI models
+OPENAI_API_KEY=...
+
+# For custom models, define your own
+CUSTOM_API_KEY=...
+```
+
+3. **Configure models:**
+
+Create `models.toml` to specify which models to benchmark (see examples above).
+
+#### Running Evaluations
+
+```bash
+# Run all model × exam combinations
+python evaluate.py
+
+# Run a specific model
+python evaluate.py --model "glm-4.7"
+
+# Run a specific exam
+python evaluate.py --exam "2023-01-11_08"
+
+# Run a specific model × exam combination
+python evaluate.py --model "glm-4.7" --exam "2023-01-11_08"
+
+# Test model configuration without running full evaluation
+python evaluate.py --model "my-model" --model-dry-run
+
+# Ignore cached results and re-run everything
+python evaluate.py --no-cache
+
+# Adjust timeout (default: 30 minutes per agent run)
+python evaluate.py --timeout 3600
+
+# Adjust max agent turns (default: 100)
+python evaluate.py --max-turns 50
+```
+
+#### Dry-run Mode
+
+Test the infrastructure without executing opencode:
+
+```bash
+python evaluate.py --eval-dry-run
+```
 
 ---
 
