@@ -1,6 +1,7 @@
 results/**/*
 !results/**/
 !results/**/result.json
+models.toml
 
 tmp/
 site/leaderboard_data.json
