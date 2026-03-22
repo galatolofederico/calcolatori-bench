@@ -1123,8 +1123,16 @@ def main():
     # Run evaluations
     results_summary = []
     for model in models:
+        model_name = model["name"]
+        display_name = model.get("display_name", model_name)
+        model_dir = RESULTS_DIR / sanitize_path(model_name)
+        model_dir.mkdir(parents=True, exist_ok=True)
+        model_info_path = model_dir / "model_info.json"
+        if not model_info_path.exists():
+            with open(model_info_path, "w") as f:
+                json.dump({"display_name": display_name}, f, indent=2)
+
         for exam in exams:
-            model_name = model["name"]
             exam_name = exam.name
 
             # Check cache

@@ -25,6 +25,15 @@ def load_results(results_dir: Path) -> list[dict]:
         if not model_dir.is_dir():
             continue
         model_name = model_dir.name
+        model_info_path = model_dir / "model_info.json"
+        display_name = model_name
+        if model_info_path.exists():
+            try:
+                with open(model_info_path) as f:
+                    model_info = json.load(f)
+                    display_name = model_info.get("display_name", model_name)
+            except (json.JSONDecodeError, IOError):
+                pass
         for exam_dir in sorted(model_dir.iterdir()):
             if not exam_dir.is_dir():
                 continue
@@ -36,6 +45,7 @@ def load_results(results_dir: Path) -> list[dict]:
                 results.append(
                     {
                         "model": model_name,
+                        "display_name": display_name,
                         "exam": exam_name,
                         "passed": data.get("passed", False),
                         "error": data.get("error"),
@@ -56,6 +66,7 @@ def build_leaderboard_data(results: list[dict]) -> dict:
     """Build the leaderboard data structure."""
     models = sorted(set(r["model"] for r in results))
     exams = sorted(set(r["exam"] for r in results))
+    display_names = {r["model"]: r["display_name"] for r in results}
 
     model_stats = {}
     for model in models:
@@ -65,6 +76,7 @@ def build_leaderboard_data(results: list[dict]) -> dict:
         total_steps = sum(r["actual_turns"] or 0 for r in model_results)
         max_steps = sum(r["max_turns"] or 100 for r in model_results)
         model_stats[model] = {
+            "display_name": display_names.get(model, model),
             "passed": passed,
             "total": total,
             "percentage": round(passed / total * 100, 1) if total > 0 else 0,
@@ -167,8 +179,9 @@ def main():
         print("\nLeaderboard:")
         for i, model in enumerate(leaderboard_data["models"], 1):
             stats = leaderboard_data["model_stats"][model]
+            display_name = stats.get("display_name", model)
             print(
-                f"  {i}. {model}: {stats['passed']}/{stats['total']} ({stats['percentage']}%)"
+                f"  {i}. {display_name}: {stats['passed']}/{stats['total']} ({stats['percentage']}%)"
             )
 
 
