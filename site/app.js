@@ -23,7 +23,7 @@ function renderLeaderboard(data) {
         return `
             <tr onclick="window.location.href='detail.html?model=${encodeURIComponent(model)}'" class="clickable">
                 <td class="rank">${i + 1}</td>
-                <td class="model">${esc(model)}</td>
+                <td class="model">${esc(s.display_name || model)}</td>
                 <td class="score">${s.passed}/${s.total}<br><small>${s.total_steps}/${s.max_steps} steps</small></td>
                 <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width:${s.percentage}%"></div></div></td>
             </tr>

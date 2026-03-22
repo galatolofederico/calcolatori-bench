@@ -24,8 +24,9 @@ document.addEventListener('DOMContentLoaded', async () => {
 });
 
 function renderHeader(modelName, data) {
-    document.title = `${modelName} - calcolatori-bench`;
-    document.getElementById('model-name').textContent = modelName;
+    const displayName = data.model_stats[modelName]?.display_name || modelName;
+    document.title = `${displayName} - calcolatori-bench`;
+    document.getElementById('model-name').textContent = displayName;
     
     const stats = data.model_stats[modelName];
     if (stats) {
