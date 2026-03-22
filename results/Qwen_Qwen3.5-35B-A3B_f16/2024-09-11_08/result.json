@@ -1,0 +1,21 @@
+{
+  "passed": false,
+  "output": [],
+  "expected": [
+    "TEST 1 PROC 4: OK",
+    "TEST 2 PROC 4: OK",
+    "TEST 3 PROC 4: OK",
+    "TEST 4 PROC 4: OK",
+    "TEST 5 PROC 4: OK",
+    "TEST 6 PROC 4: OK",
+    "TEST 7 PROC 4: OK",
+    "Premere un tasto per continuare"
+  ],
+  "boot_output": "nessun modulo trovato in boot; compile \u00e8 stato eseguito correttamente?\n",
+  "agent_output": "Performing one time database migration, may take a few minutes...\nsqlite-migration:done\nDatabase migration complete.\n\u001b[0m\n> build \u00b7 Qwen/Qwen3.5-35B-A3B\n\u001b[0m\n\u001b[0m$ \u001b[0mls -la\ntotal 204\ndrwxr-xr-x. 12 vscode vscode   4096 Mar 22 20:11 .\ndrwxr-xr-x.  3 vscode vscode   4096 Feb 23  2025 ..\ndrwxr-xr-x.  7 vscode vscode   4096 Mar 22 20:11 .git\n-rw-r--r--.  1 vscode vscode    161 Mar 22 20:11 .gitignore\ndrwxr-xr-x.  2 vscode vscode   4096 Feb 23  2025 .vscode\n-rw-r--r--.  1 vscode vscode 119401 Mar 24  2025 Doxyfile\n-rw-r--r--.  1 vscode vscode  10354 Mar 24  2025 Makefile\n-rw-r--r--.  1 vscode vscode    109 Mar 24  2025 NOTE\n-rw-r--r--.  1 vscode vscode     66 Mar 24  2025 README.md\ndrwxr-xr-x.  2 vscode vscode   4096 Feb 23  2025 boot\ndrwxr-xr-x.  2 vscode vscode   4096 Feb 23  2025 conf\ndrwxr-xr-x.  2 vscode vscode   4096 Feb 23  2025 debug\ndrwxr-xr-x.  2 vscode vscode   4096 Feb 23  2025 include\ndrwxr-xr-x.  2 vscode vscode   4096 Feb 23  2025 io\n-rw-r--r--.  1 vscode vscode    416 Mar 22 20:11 opencode.json\n-rw-r--r--.  1 vscode vscode   5362 Mar 24  2025 question.dox\ndrwxr-xr-x.  2 vscode vscode   4096 Feb 23  2025 sistema\ndrwxr-xr-x.  3 vscode vscode   4096 Feb 23  2025 utente\ndrwxr-xr-x.  2 vscode vscode   4096 Mar 24  2025 util\n\u001b[0m\n\u001b[0m\u2731 \u001b[0mGrep \"ESAME\"\u001b[90m in . \u00b7 20 matches\u001b[0m\n",
+  "duration_seconds": 40.56,
+  "turns": 3,
+  "max_turns": 100,
+  "diff": "",
+  "error": null
+}
