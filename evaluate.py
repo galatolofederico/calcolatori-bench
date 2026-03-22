@@ -81,6 +81,12 @@ def load_models(config_path: Path) -> list[dict]:
     return [interpolate_dict_env_vars(m) for m in models]
 
 
+def custom_provider_id(name: str) -> str:
+    """Build a custom provider ID from a model name, replacing '/' to avoid
+    clashing with OpenCode's provider/model separator."""
+    return f"custom-{name.replace('/', '-')}"
+
+
 def get_provider_config(provider_name: str, model: Optional[dict] = None) -> dict:
     """Get provider configuration by name.
 
@@ -92,7 +98,7 @@ def get_provider_config(provider_name: str, model: Optional[dict] = None) -> dic
         if "base_url" not in model:
             raise ValueError("Custom provider requires 'base_url' in model config")
         return {
-            "provider_id": f"custom-{model['name']}",
+            "provider_id": custom_provider_id(model["name"]),
             "base_url": model["base_url"],
             "is_custom": True,
         }
@@ -185,13 +191,13 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
     shortcut = model.get("shortcut")
 
     if provider_name == "custom":
-        custom_provider_id = f"custom-{model['name']}"
+        cpid = custom_provider_id(model["name"])
         base_url = model["base_url"]
         config = {
             "$schema": "https://opencode.ai/config.json",
             "permission": "allow",
             "provider": {
-                custom_provider_id: {
+                cpid: {
                     "npm": "@ai-sdk/openai-compatible",
                     "options": {"baseURL": base_url},
                     "models": {
@@ -204,9 +210,9 @@ def generate_opencode_config(model: dict, api_key: str) -> dict:
             },
         }
         if model.get("modalities"):
-            config["provider"][custom_provider_id]["models"][model_id]["modalities"] = (
-                model["modalities"]
-            )
+            config["provider"][cpid]["models"][model_id]["modalities"] = model[
+                "modalities"
+            ]
         return config
 
     provider_id = provider_config["provider_id"]
@@ -247,8 +253,8 @@ def generate_auth_json(model: dict, api_key: str) -> dict:
     shortcut = model.get("shortcut")
 
     if provider_name == "custom":
-        custom_provider_id = f"custom-{model['name']}"
-        return {custom_provider_id: {"type": "api", "key": api_key}}
+        cpid = custom_provider_id(model["name"])
+        return {cpid: {"type": "api", "key": api_key}}
 
     provider_id = provider_config["provider_id"]
 
@@ -348,7 +354,7 @@ def run_exam(
     shortcut = model.get("shortcut")
 
     if provider_name == "custom":
-        provider_id = f"custom-{model_name}"
+        provider_id = custom_provider_id(model_name)
         env_var = "CUSTOM_API_KEY"
     else:
         provider_id = provider_config["provider_id"]
@@ -1016,7 +1022,7 @@ def main():
         shortcut = model.get("shortcut")
 
         if provider == "custom":
-            dry_run_provider_id = f"custom-{model_name}"
+            dry_run_provider_id = custom_provider_id(model_name)
             env_var = "CUSTOM_API_KEY"
         else:
             dry_run_provider_id = provider_config["provider_id"]
