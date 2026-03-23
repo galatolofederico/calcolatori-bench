@@ -25,10 +25,13 @@ function renderLeaderboard(data) {
             const passed = result?.passed;
             return `<div class="square ${passed ? 'passed' : 'failed'}"></div>`;
         }).join('');
+        const displayName = s.display_name || model;
+        const colonIdx = displayName.lastIndexOf(':');
+        const badge = colonIdx !== -1 ? `<span class="badge">${displayName.slice(colonIdx + 1)}</span>` : '';
         return `
             <tr onclick="window.location.href='detail.html?model=${encodeURIComponent(model)}'" class="clickable">
                 <td class="rank">${i + 1}</td>
-                <td class="model">${esc(s.display_name || model)}</td>
+                <td class="model">${esc(displayName)} ${badge}</td>
                 <td class="score">${s.passed}/${s.total}<br><small>${s.total_steps}/${s.max_steps} steps</small></td>
                 <td class="squares-cell"><div class="squares">${squares}</div></td>
             </tr>

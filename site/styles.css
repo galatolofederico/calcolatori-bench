@@ -120,6 +120,19 @@ td {
     color: #fff;
 }
 
+.badge {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 2px 6px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    font-family: 'SF Mono', Monaco, monospace;
+    background: #222;
+    color: #888;
+    border-radius: 4px;
+    vertical-align: middle;
+}
+
 .score {
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.85rem;
