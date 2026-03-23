@@ -126,21 +126,28 @@ td {
     color: #4ade80;
 }
 
-.bar-cell {
+.squares-cell {
     width: 200px;
 }
 
-.bar {
-    height: 4px;
-    background: #222;
-    border-radius: 2px;
-    overflow: hidden;
+.squares {
+    display: flex;
+    gap: 4px;
+    align-items: center;
 }
 
-.bar-fill {
-    height: 100%;
+.square {
+    width: 14px;
+    height: 14px;
+    border-radius: 3px;
+}
+
+.square.passed {
     background: #4ade80;
-    border-radius: 2px;
+}
+
+.square.failed {
+    background: #f87171;
 }
 
 #stats {
@@ -327,7 +334,7 @@ td {
         font-size: 1.5rem;
     }
 
-    .bar-cell {
+    .squares-cell {
         display: none;
     }
 

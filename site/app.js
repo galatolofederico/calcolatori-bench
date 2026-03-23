@@ -20,12 +20,17 @@ function renderLeaderboard(data) {
 
     tbody.innerHTML = data.models.map((model, i) => {
         const s = data.model_stats[model];
+        const squares = data.exams.map(exam => {
+            const result = data.exam_results[exam]?.[model];
+            const passed = result?.passed;
+            return `<div class="square ${passed ? 'passed' : 'failed'}"></div>`;
+        }).join('');
         return `
             <tr onclick="window.location.href='detail.html?model=${encodeURIComponent(model)}'" class="clickable">
                 <td class="rank">${i + 1}</td>
                 <td class="model">${esc(s.display_name || model)}</td>
                 <td class="score">${s.passed}/${s.total}<br><small>${s.total_steps}/${s.max_steps} steps</small></td>
-                <td class="bar-cell"><div class="bar"><div class="bar-fill" style="width:${s.percentage}%"></div></div></td>
+                <td class="squares-cell"><div class="squares">${squares}</div></td>
             </tr>
         `;
     }).join('');
