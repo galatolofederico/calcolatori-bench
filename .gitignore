@@ -1,6 +1,7 @@
 results/**/*
 !results/**/
 !results/**/result.json
+!results/**/model_info.json
 models.toml
 
 tmp/
