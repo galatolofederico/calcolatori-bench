@@ -1,0 +1,21 @@
+{
+  "passed": false,
+  "output": [],
+  "expected": [
+    "TEST 1 PROC 4: OK",
+    "TEST 2 PROC 4: OK",
+    "TEST 3 PROC 4: OK",
+    "TEST 4 PROC 4: OK",
+    "TEST 5 PROC 4: OK",
+    "TEST 6 PROC 4: OK",
+    "TEST 7 PROC 4: OK",
+    "Premere un tasto per continuare"
+  ],
+  "boot_output": "nessun modulo trovato in boot; compile \u00e8 stato eseguito correttamente?\n",
+  "agent_output": "Performing one time database migration, may take a few minutes...\nsqlite-migration:done\nDatabase migration complete.\n\u001b[0m\n> build \u00b7 Qwen/Qwen3.6-35B-A3B\n\u001b[0m\n\u001b[0m\u2731 \u001b[0mGlob \"**/*.{cpp,h,hpp}\"\u001b[90m 16 matches\u001b[0m\n\u001b[0m\u2731 \u001b[0mGrep \"ESAME\"\u001b[90m in . \u00b7 20 matches\u001b[0m\n\u001b[0m\u2731 \u001b[0mGrep \"SOLUZIONE\"\u001b[90m in . \u00b7 2 matches\u001b[0m\n\u001b[0m\u2192 \u001b[0mRead sistema/sistema.cpp\n\u001b[0m\u2192 \u001b[0mRead sistema/sistema.cpp\u001b[90m [offset=1850]\u001b[0m\n\u001b[0m\u2192 \u001b[0mRead sistema/sistema.cpp\u001b[90m [offset=2020, limit=100]\u001b[0m\n\u001b[0m\u2192 \u001b[0mRead include/costanti.h\u001b[90m [offset=28, limit=40]\u001b[0m\n\u001b[0m\u2192 \u001b[0mRead include/sys.h\u001b[90m [offset=123, limit=70]\u001b[0m\n",
+  "duration_seconds": 122.34,
+  "turns": 6,
+  "max_turns": 100,
+  "diff": "",
+  "error": null
+}
