@@ -133,6 +133,12 @@ td {
     vertical-align: middle;
 }
 
+.badge.harness-badge {
+    background: #1a1033;
+    color: #a78bfa;
+    border: 1px solid #3b2668;
+}
+
 .score {
     font-family: 'SF Mono', Monaco, monospace;
     font-size: 0.85rem;

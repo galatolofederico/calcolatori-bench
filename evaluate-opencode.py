@@ -49,7 +49,7 @@ def interpolate_dict_env_vars(d: dict) -> dict:
 
 
 DOCKER_IMAGE = "calcolatori-bench"
-RESULTS_DIR = Path("results")
+RESULTS_DIR = Path("results/opencode")
 EXAMS_DIR = Path("exams")
 MODELS_CONFIG = Path("models.toml")
 
@@ -314,7 +314,7 @@ def check_docker_image():
 
 
 def build_docker_image():
-    """Build the Docker image from container/Dockerfile."""
+    """Build the Docker image from container/Dockerfile.opencode."""
     print("==> Building Docker image...")
     result = subprocess.run(
         [
@@ -323,7 +323,7 @@ def build_docker_image():
             "-t",
             DOCKER_IMAGE,
             "-f",
-            "container/Dockerfile",
+            "container/Dockerfile.opencode",
             "container/",
         ],
         capture_output=False,

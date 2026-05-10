@@ -28,10 +28,11 @@ function renderLeaderboard(data) {
         const displayName = s.display_name || model;
         const colonIdx = displayName.lastIndexOf(':');
         const badge = colonIdx !== -1 ? `<span class="badge">${displayName.slice(colonIdx + 1)}</span>` : '';
+        const harness = s.harness ? `<span class="badge harness-badge" title="Harness: ${esc(s.harness)}">${esc(s.harness)}</span>` : '';
         return `
             <tr onclick="window.location.href='detail.html?model=${encodeURIComponent(model)}'" class="clickable">
                 <td class="rank">${i + 1}</td>
-                <td class="model">${esc(displayName)} ${badge}</td>
+                <td class="model">${esc(displayName)} ${badge} ${harness}</td>
                 <td class="score">${s.passed}/${s.total}<br><small>${s.total_steps}/${s.max_steps} steps</small></td>
                 <td class="squares-cell"><div class="squares">${squares}</div></td>
             </tr>

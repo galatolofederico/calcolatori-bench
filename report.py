@@ -14,7 +14,7 @@ import sys
 from pathlib import Path
 
 
-RESULTS_DIR = Path("results")
+RESULTS_DIR = Path("results/opencode")
 
 
 def load_results(results_dir: Path) -> list[dict]:
@@ -166,7 +166,7 @@ def main():
 
     results = load_results(args.results)
     if not results:
-        print("No results found. Run evaluate.py first.")
+        print("No results found. Run evaluate-opencode.py first.")
         sys.exit(0)
 
     models, exams, scores = build_table(results)
