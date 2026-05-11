@@ -41,14 +41,15 @@ RUN mkdir -p /work && chown vscode:vscode /work
 USER vscode
 WORKDIR /work
 
-# Install bun
-USER vscode
-RUN curl -fsSL https://bun.com/install | bash -s "bun-v1.3.9"
+# Install Node.js (pi requires node, not bun)
+USER root
+RUN curl -fsSL https://deb.nodesource.com/setup_22.x | bash - && \
+    apt-get install -y nodejs
 
 # Install pi coding agent
-RUN /home/vscode/.bun/bin/bun install -g @earendil-works/pi-coding-agent@0.74.0
+RUN npm install -g @earendil-works/pi-coding-agent@0.74.0
 
-ENV PATH="/home/vscode/CE/bin:/home/vscode/.bun/bin:${PATH}"
+ENV PATH="/home/vscode/CE/bin:${PATH}"
 
 # Copy the max-iterations extension into the container
 COPY assets/pi/max-iterations.ts /opt/pi-extensions/max-iterations.ts
