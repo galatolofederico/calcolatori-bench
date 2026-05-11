@@ -363,7 +363,7 @@ pi --mode json \\
   -e /opt/pi-extensions/max-iterations.ts \\
   --max-iterations {max_iterations} \\
   --model custom/{model_id} \\
-  '{prompt_escaped}' 2>&1 | tee /tmp/agent_output.log || true
+  '{prompt_escaped}' 2>&1 | grep -v -e '"type":"message_update"' -e '"type":"agent_end"' | tee /tmp/agent_output.log || true
 
 # Save the diff
 git diff > /tmp/solution.diff
