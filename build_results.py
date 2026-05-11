@@ -81,23 +81,43 @@ def discover_harnesses(results_dir: Path) -> list[str]:
 
 
 def build_leaderboard_data(results: list[dict]) -> dict:
-    """Build the leaderboard data structure with harness support."""
-    harnesses = sorted(set(r["harness"] for r in results))
-    models = sorted(set(r["model"] for r in results))
-    exams = sorted(set(r["exam"] for r in results))
-    display_names = {r["model"]: r["display_name"] for r in results}
+    """Build the leaderboard data structure with harness support.
 
+    Models from different harnesses are treated as distinct entries, keyed
+    by a compound model_key = f"{harness}:{model}".
+    """
+    harnesses = sorted(set(r["harness"] for r in results))
+    exams = sorted(set(r["exam"] for r in results))
+
+    # Build unique model entries (model + harness combos)
+    model_keys = sorted(set(f"{r['harness']}:{r['model']}" for r in results))
+
+    # Parse model keys into components
+    model_info = {}  # model_key -> {harness, model, display_name}
+    for mk in model_keys:
+        harness, _, model = mk.partition(":")
+        matching = [r for r in results if r["harness"] == harness and r["model"] == model]
+        model_info[mk] = {
+            "harness": harness,
+            "model": model,
+            "display_name": matching[0]["display_name"] if matching else model,
+        }
+
+    # Per-model stats keyed by compound key
     model_stats = {}
-    for model in models:
-        model_results = [r for r in results if r["model"] == model]
+    for mk in model_keys:
+        info = model_info[mk]
+        harness = info["harness"]
+        model = info["model"]
+        model_results = [r for r in results if r["harness"] == harness and r["model"] == model]
         passed = sum(1 for r in model_results if r["passed"])
         total = len(model_results)
         total_steps = sum(r["actual_turns"] or 0 for r in model_results)
         max_steps = sum(r["max_turns"] or 100 for r in model_results)
-        harness = model_results[0]["harness"] if model_results else ""
-        model_stats[model] = {
-            "display_name": display_names.get(model, model),
+        model_stats[mk] = {
+            "display_name": info["display_name"],
             "harness": harness,
+            "model": model,
             "passed": passed,
             "total": total,
             "percentage": round(passed / total * 100, 1) if total > 0 else 0,
@@ -109,17 +129,21 @@ def build_leaderboard_data(results: list[dict]) -> dict:
     detailed_results = {}
     for exam in exams:
         exam_results[exam] = {}
-        for model in models:
+        for mk in model_keys:
+            info = model_info[mk]
+            harness = info["harness"]
+            model = info["model"]
             result = next(
-                (r for r in results if r["model"] == model and r["exam"] == exam), None
+                (r for r in results if r["harness"] == harness and r["model"] == model and r["exam"] == exam),
+                None,
             )
             if result:
-                exam_results[exam][model] = {
+                exam_results[exam][mk] = {
                     "passed": result["passed"],
                     "error": result["error"],
                     "harness": result["harness"],
                 }
-                detailed_results.setdefault(model, {})[exam] = {
+                detailed_results.setdefault(mk, {})[exam] = {
                     "harness": result["harness"],
                     "passed": result["passed"],
                     "error": result["error"],
@@ -133,7 +157,7 @@ def build_leaderboard_data(results: list[dict]) -> dict:
                     "max_turns": result["max_turns"],
                 }
             else:
-                exam_results[exam][model] = {
+                exam_results[exam][mk] = {
                     "passed": None,
                     "error": "No result",
                     "harness": None,
@@ -153,9 +177,14 @@ def build_leaderboard_data(results: list[dict]) -> dict:
             "percentage": round(harness_passed / harness_total * 100, 1) if harness_total > 0 else 0,
         }
 
+    # Models per harness (for filter tabs)
+    harness_models = {}
+    for harness in harnesses:
+        harness_models[harness] = [mk for mk in model_keys if model_info[mk]["harness"] == harness]
+
     sorted_models = sorted(
-        models,
-        key=lambda m: (model_stats[m]["passed"], model_stats[m]["total"]),
+        model_keys,
+        key=lambda mk: (model_stats[mk]["passed"], model_stats[mk]["total"]),
         reverse=True,
     )
 
@@ -163,7 +192,8 @@ def build_leaderboard_data(results: list[dict]) -> dict:
         "generated_at": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z"),
         "harnesses": harnesses,
         "harness_stats": harness_stats,
-        "total_models": len(models),
+        "harness_models": harness_models,
+        "total_models": len(model_keys),
         "total_exams": len(exams),
         "models": sorted_models,
         "exams": exams,
@@ -198,6 +228,7 @@ def main():
             .replace("+00:00", "Z"),
             "harnesses": [],
             "harness_stats": {},
+            "harness_models": {},
             "total_models": 0,
             "total_exams": 0,
             "models": [],
@@ -227,9 +258,9 @@ def main():
 
     if leaderboard_data["models"]:
         print("\nLeaderboard:")
-        for i, model in enumerate(leaderboard_data["models"], 1):
-            stats = leaderboard_data["model_stats"][model]
-            display_name = stats.get("display_name", model)
+        for i, mk in enumerate(leaderboard_data["models"], 1):
+            stats = leaderboard_data["model_stats"][mk]
+            display_name = stats.get("display_name", mk)
             harness = stats.get("harness", "")
             print(
                 f"  {i}. {display_name} [{harness}]: "

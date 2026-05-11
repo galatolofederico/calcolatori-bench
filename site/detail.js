@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', async () => {
     const params = new URLSearchParams(window.location.search);
-    const modelName = params.get('model');
+    const modelKey = params.get('model_key') || params.get('model');
     
-    if (!modelName) {
+    if (!modelKey) {
         window.location.href = 'index.html';
         return;
     }
@@ -11,33 +11,36 @@ document.addEventListener('DOMContentLoaded', async () => {
         const res = await fetch('leaderboard_data.json');
         const data = await res.json();
         
-        if (!data.models?.includes(modelName)) {
+        if (!data.model_stats?.[modelKey]) {
             window.location.href = 'index.html';
             return;
         }
         
-        renderHeader(modelName, data);
-        renderExams(modelName, data);
+        renderHeader(modelKey, data);
+        renderExams(modelKey, data);
     } catch (e) {
         document.getElementById('exams-container').innerHTML = '<p class="error">Failed to load results</p>';
     }
 });
 
-function renderHeader(modelName, data) {
-    const displayName = data.model_stats[modelName]?.display_name || modelName;
-    document.title = `${displayName} - calcolatori-bench`;
-    document.getElementById('model-name').textContent = displayName;
+function renderHeader(modelKey, data) {
+    const stats = data.model_stats[modelKey];
+    const displayName = stats?.display_name || modelKey;
+    const harness = stats?.harness || '';
     
-    const stats = data.model_stats[modelName];
+    document.title = `${displayName} - calcolatori-bench`;
+    document.getElementById('model-name').innerHTML = 
+        `${esc(displayName)} ${harness ? `<span class="badge harness-badge" title="Harness: ${esc(harness)}">${esc(harness)}</span>` : ''}`;
+    
     if (stats) {
         document.getElementById('model-stats').textContent = 
             `${stats.passed}/${stats.total} exams passed (${stats.percentage}%) · ${stats.total_steps}/${stats.max_steps} steps`;
     }
 }
 
-function renderExams(modelName, data) {
+function renderExams(modelKey, data) {
     const container = document.getElementById('exams-container');
-    const detailed = data.detailed_results?.[modelName];
+    const detailed = data.detailed_results?.[modelKey];
     
     if (!detailed || !data.exams?.length) {
         container.innerHTML = '<p class="no-data">No exam results available</p>';

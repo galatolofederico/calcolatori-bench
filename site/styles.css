@@ -47,6 +47,45 @@ header p {
     color: #e5e5e5;
 }
 
+/* Harness filter tabs */
+.harness-filters {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 20px;
+    flex-wrap: wrap;
+}
+
+.harness-tab {
+    background: #111;
+    color: #888;
+    border: 1px solid #222;
+    padding: 6px 14px;
+    border-radius: 6px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+    font-family: inherit;
+}
+
+.harness-tab:hover {
+    background: #1a1a1a;
+    color: #ccc;
+    border-color: #333;
+}
+
+.harness-tab.active {
+    background: #1a1033;
+    color: #a78bfa;
+    border-color: #3b2668;
+}
+
+.tab-count {
+    opacity: 0.5;
+    margin-left: 4px;
+    font-size: 0.75rem;
+}
+
 .back-link {
     display: inline-block;
     color: #666;
@@ -351,6 +390,15 @@ td {
 
     header h1 {
         font-size: 1.5rem;
+    }
+
+    .harness-filters {
+        gap: 4px;
+    }
+
+    .harness-tab {
+        padding: 4px 10px;
+        font-size: 0.75rem;
     }
 
     .squares-cell {
