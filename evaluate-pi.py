@@ -25,7 +25,7 @@ RESULTS_DIR = Path("results/pi")
 EXAMS_DIR = Path("exams")
 MODELS_CONFIG = Path("models.toml")
 
-MAX_ITERATIONS = 50
+MAX_ITERATIONS = 100
 
 
 def interpolate_env_vars(value: str) -> str:
