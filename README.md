@@ -39,11 +39,18 @@ This isn't about printing "Hello World." To pass, an agent must manipulate hardw
 
 ### ⚙️ Architecture & Workflow
 
-We use a containerized sandbox to ensure fair, safe, and reproducible evaluation. The agent is powered by **OpenCode**.
+We use a containerized sandbox to ensure fair, safe, and reproducible evaluation. The benchmark supports two agent harnesses, both accessible through a single entrypoint:
+
+```bash
+./evaluate.sh --harness <opencode|pi> [options...]
+```
+
+* **[OpenCode](https://github.com/opencode-ai/opencode)** — `./evaluate.sh --harness opencode`
+* **[pi](https://pi.dev)** — `./evaluate.sh --harness pi`
 
 **The Gauntlet:**
 
-1. **📦 Sandbox Spawning:** A Docker container spins up with the build environment (GCC, Make, QEMU/Boot tools) and `opencode` pre-installed.
+1. **📦 Sandbox Spawning:** A Docker container spins up with the build environment (GCC, Make, QEMU/Boot tools) and the chosen agent harness pre-installed.
 2. **💉 Context Injection:** The specific exam text (in Italian) is extracted and fed to the agent.
 3. **🤖 Agent Execution:** The agent is dropped into the kernel's source code and told to:
  - Read the PDF documentation.
@@ -156,10 +163,14 @@ api_key = "${CUSTOM_API_KEY}"
 
 #### Setup
 
-1. **Build the Docker image:**
+1. **Build the Docker image** (choose the harness you plan to use):
 
 ```bash
-python evaluate.py --build
+# OpenCode harness
+./evaluate.sh --harness opencode --build
+
+# Pi harness
+./evaluate.sh --harness pi --build
 ```
 
 2. **Configure API keys:**
@@ -189,45 +200,59 @@ Create `models.toml` to specify which models to benchmark (see examples above).
 
 #### Running Evaluations
 
+All evaluation commands go through `./evaluate.sh` with the `--harness` flag. All remaining arguments are forwarded to the underlying Python script.
+
 ```bash
-# Run all model × exam combinations
-python evaluate.py
+# Run all model × exam combinations (OpenCode)
+./evaluate.sh --harness opencode
+
+# Run all model × exam combinations (pi)
+./evaluate.sh --harness pi
 
 # Run a specific model
-python evaluate.py --model "glm-4.7"
+./evaluate.sh --harness opencode --model "glm-4.7"
+./evaluate.sh --harness pi --model "Qwen/Qwen3.5-27B:f16"
 
 # Run a specific exam
-python evaluate.py --exam "2023-01-11_08"
+./evaluate.sh --harness opencode --exam "2023-01-11_08"
+./evaluate.sh --harness pi --exam "2023-01-11_08"
 
 # Run a specific model × exam combination
-python evaluate.py --model "glm-4.7" --exam "2023-01-11_08"
+./evaluate.sh --harness opencode --model "glm-4.7" --exam "2023-01-11_08"
+./evaluate.sh --harness pi --model "Qwen/Qwen3.5-27B:f16" --exam "2023-01-11_08"
 
 # Test model configuration without running full evaluation
-python evaluate.py --model "my-model" --model-dry-run
+./evaluate.sh --harness opencode --model "my-model" --model-dry-run
+./evaluate.sh --harness pi --model "my-model" --model-dry-run
 
 # Ignore cached results and re-run everything
-python evaluate.py --no-cache
+./evaluate.sh --harness opencode --no-cache
+./evaluate.sh --harness pi --no-cache
 
 # Adjust timeout (default: 30 minutes per agent run)
-python evaluate.py --timeout 3600
+./evaluate.sh --harness opencode --timeout 3600
+./evaluate.sh --harness pi --timeout 3600
 
-# Adjust max agent turns (default: 100)
-python evaluate.py --max-turns 50
+# Adjust max agent turns (OpenCode, default: 100)
+./evaluate.sh --harness opencode --max-turns 50
+
+# Adjust max agent iterations (pi, default: 50)
+./evaluate.sh --harness pi --max-iterations 30
 ```
 
 #### Dry-run Mode
 
-Test the infrastructure without executing opencode:
+Test the infrastructure without executing the agent:
 
 ```bash
-python evaluate.py --eval-dry-run
+./evaluate.sh --harness opencode --eval-dry-run
+./evaluate.sh --harness pi --eval-dry-run
 ```
-
----
 
 ### 📊 Results & Caching
 
 Testing takes time and tokens. We respect both.
 
-* **Caching:** Results are cached in the `results/` folder. If you rerun the script, it skips model/exam combinations that have already been evaluated.
+* **Caching:** Results are cached per-harness in `results/<harness>/` (e.g., `results/opencode/`, `results/pi/`). If you rerun the script, it skips model/exam combinations that have already been evaluated.
 * **Score:** The final metric is raw and brutal: **Passed Exams / Total Attempts**.
+* **Leaderboard:** Run `python build_results.py` to generate `site/leaderboard_data.json` from all harness results. The static website at `site/` consumes this file.
